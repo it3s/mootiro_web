@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# http://docs.python.org/whatsnew/pep-328.html
+from __future__ import absolute_import
+from __future__ import print_function   # deletes the print statement
+from __future__ import unicode_literals # unicode by default
 
 doc_do_tiago = '''
 
@@ -24,10 +28,6 @@ TODO 2011-01-27: Colocar um treco de importação de strings, para o momento do 
 
 '''
 
-# http://docs.python.org/whatsnew/pep-328.html
-from __future__ import absolute_import
-from __future__ import print_function   # deletes the print statement
-from __future__ import unicode_literals # unicode by default
 
 
 class Registry(object):
@@ -47,7 +47,8 @@ class Registry(object):
      
 
     def js_import(self, alias = '', path = '', depends=None):
-        ''' This method imports javascript files. It only accepts a file at a time. Then the javascript goes to an internal registry.
+        ''' This method imports javascript files. It only accepts a file at a 
+        time. Then the javascript goes to an internal registry.
         '''
         #First of all, let's check the input
         if type(alias) != str: 
@@ -59,7 +60,7 @@ class Registry(object):
 #            if not _all_js[depends]:
 #                raise Exception("Your dependency has not been registered yet")
 
-        self._all_js[alias] = (path,depends)
+        self._all_js[alias] = (path, depends)
     
 
     def css_import(self, alias = '', path = '', priority=100):
@@ -78,8 +79,12 @@ class Registry(object):
 
     def package_import(self, alias = '', js = [], css = [] ):
         '''This method registers a lot of aliases as a package. Usage is: 
-        package_import(alias = TODO: This function seems unnecessary.  Imports a bunch of files at a time. Those files are the first to be loaded, and are stored with the javascript files. 
-        Why? Because have to be placed in the Javascript variable because of dependencies '''
+        package_import(alias = TODO: This function seems unnecessary.  Imports 
+        a bunch of files at a time. Those files are the first to be loaded, and
+        are stored with the javascript files. 
+        Why? Because have to be placed in the Javascript variable because of 
+        dependencies 
+        '''
         #Okay, I won't check anything, I'm lazy
         self._all_js[alias] = (js, css)
 
@@ -124,7 +129,9 @@ class Registry(object):
 #       return True
 
     def css_require(self, name = ''):
-        ''' This function prepares a variable containing all the necessary css files  '''
+        ''' This function prepares a variable containing all the necessary css
+        files
+        '''
         #Edgar, favor rever aqui!!
         if self._things_already_required[name]:
             return True
@@ -144,8 +151,8 @@ class Registry(object):
                     self._things_already_required[javascript] = "REQ" 
             for css in value[1]:
                 if not self._things_already_required[css]:
-                   self._sorted_css.append(css)
-                   self._things_already_required[css] = "REQ"
+                    self._sorted_css.append(css)
+                    self._things_already_required[css] = "REQ"
         # Not a beautiful iteration, but inherited from my times as a
         # C developer
 
