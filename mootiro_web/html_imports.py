@@ -30,7 +30,7 @@ TODO 2011-01-27: Colocar um treco de importação de strings, para o momento do 
 
 
 
-class Registry(object):
+class HtmlImports(object):
     '''This is the big class containing all the import methods and the require
     methods.
     '''
@@ -46,7 +46,7 @@ class Registry(object):
 
      
 
-    def js_import(self, alias = '', path = '', depends=None):
+    def js_import(self, alias, path, depends=None):
         ''' This method imports javascript files. It only accepts a file at a 
         time. Then the javascript goes to an internal registry.
         '''
@@ -166,12 +166,15 @@ class Registry(object):
     def ready_set_go(self):
         '''This function simply dispatchs all the css files in the _sorted_css variable '''
         self._sorted_css = sorted(self._sorted_css, key = lambda css_package: css_package[2])
-        for i in self._sorted_css:
-            print(i)
-        for i in self._sorted_js:
-            print(i)
-        for i in self._sorted_onload:
-            print(i)
+        output = ''
+        
+        for css in self._sorted_css:
+            output += '<link rel="stylesheet" type="text/css" href="%s"/>' %
+                      css[1]
+        for js in self._sorted_js:
+            output += '<script type="text/javascript" src="%s"/>' % js[1]
+
+        return output
 
 
 
