@@ -51,11 +51,6 @@ class HtmlImports(object):
         time. Then the javascript goes to an internal registry.
         '''
         #First of all, let's check the input
-        if type(alias) != str: 
-            raise Exception("Alias must be a string") 
-
-        if not path:
-            raise Exception("Path must not be empty")
 #        if depends:
 #            if not _all_js[depends]:
 #                raise Exception("Your dependency has not been registered yet")
@@ -69,10 +64,6 @@ class HtmlImports(object):
         second.... 
         This function must be used for one archive at a time only.    
             '''
-        if type(alias) != str:
-            raise Exception("Alias must be a string")
-        if not path:
-            raise Exception("Path must not be empty")
         
         self._all_css[alias] = (path, priority)
         
