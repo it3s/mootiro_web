@@ -169,8 +169,7 @@ class HtmlImports(object):
         output = ''
         
         for css in self._sorted_css:
-            output += '<link rel="stylesheet" type="text/css" href="%s"/>' %
-                      css[1]
+            output += '<link rel="stylesheet" type="text/css" href="%s"/>' % css[1]
         for js in self._sorted_js:
             output += '<script type="text/javascript" src="%s"/>' % js[1]
 
