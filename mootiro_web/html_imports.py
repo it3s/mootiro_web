@@ -94,16 +94,17 @@ class HtmlImports(object):
     def package_remove(self, alias=''):
         del self._all_js[alias]
 
-    def js_require(self, name = ''):
+    def js_require(self, name):
         ''' Returns a Javscript library
             TODO: Make it work with multiple dependencies
         '''
         #First of all, we check if the library is already loaded
-        if self._things_already_required[name]:
+        if self._things_already_required.haskey(name):
             return True
         #The rest of the checks comes free from Python
         self._sorted_js.append((name, self._all_js[name][0],
             self._all_js[name][1]))
+        self._things_already_required[name] = "REQ"
     
 #    def js_require(self, name = ''):
 #       '''Returns a Javascript library
