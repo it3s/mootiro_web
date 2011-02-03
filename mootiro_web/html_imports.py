@@ -124,8 +124,7 @@ class HtmlImports(object):
         ''' This function prepares a variable containing all the necessary css
         files
         '''
-        #Edgar, favor rever aqui!!
-        if self._things_already_required[name]:
+        if self._things_already_required.has_key(name):
             return True
         self._sorted_css.append((name, self._all_css[name][0],self._all_css[name][1]))
 
@@ -133,7 +132,7 @@ class HtmlImports(object):
         ''' This function returns the files defined as a package, except those already loaded
         
         '''
-        if self._things_already_required[name]:
+        if self._things_already_required.has_key(name):
             return True
         
         for key, value in self._packages.items():
@@ -149,7 +148,7 @@ class HtmlImports(object):
         # C developer
 
     def onload_require(self, name):
-        if self._things_already_required[name]:
+        if self._things_already_required.has_key(name):
             return True
 
         self._sorted_onload.append(name)
