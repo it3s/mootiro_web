@@ -99,7 +99,7 @@ class HtmlImports(object):
             TODO: Make it work with multiple dependencies
         '''
         #First of all, we check if the library is already loaded
-        if self._things_already_required.haskey(name):
+        if self._things_already_required.has_key(name):
             return True
         #The rest of the checks comes free from Python
         self._sorted_js.append((name, self._all_js[name][0],
