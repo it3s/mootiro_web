@@ -68,7 +68,7 @@ class HtmlImports(object):
         self._all_css[alias] = (path, priority)
         
 
-    def package_import(self, alias = '', js = [], css = [] ):
+    def package_import(self, alias, js, css):
         '''This method registers a lot of aliases as a package. Usage is: 
         package_import(alias = TODO: This function seems unnecessary.  Imports 
         a bunch of files at a time. Those files are the first to be loaded, and
@@ -79,20 +79,23 @@ class HtmlImports(object):
         #Okay, I won't check anything, I'm lazy
         self._all_js[alias] = (js, css)
 
-    def onload_import(self, alias = '', text = ''):
+    def onload_import(self, alias, text):
         ''' This method imports a javascript onload definition 
 
         '''
         self._onload[alias] = text 
 
-    def js_remove(self, alias=''):
+    def js_remove(self, alias):
         del self._all_js[alias]
 
-    def css_remove(self, alias=''):
+    def css_remove(self, alias):
         del self._all_css[alias]
  
-    def package_remove(self, alias=''):
+    def package_remove(self, alias):
         del self._all_js[alias]
+
+    def onload_remove(self, alias):
+        del self._onload[alias]
 
     def js_require(self, name):
         ''' Returns a Javscript library
@@ -120,7 +123,7 @@ class HtmlImports(object):
 #       _sorted_js.append((name, self._all_js[name][0], self._all_js[name][1]))
 #       return True
 
-    def css_require(self, name = ''):
+    def css_require(self, name):
         ''' This function prepares a variable containing all the necessary css
         files
         '''
@@ -128,7 +131,7 @@ class HtmlImports(object):
             return True
         self._sorted_css.append((name, self._all_css[name][0],self._all_css[name][1]))
 
-    def package_require(self, name = ''):
+    def package_require(self, name):
         ''' This function returns the files defined as a package, except those already loaded
         
         '''
@@ -137,11 +140,11 @@ class HtmlImports(object):
         
         for key, value in self._packages.items():
             for javascript in value[0]:
-                if not self._things_already_required[javascript]:
+                if not self._things_already_required.has_key(javascript):
                     self._sorted_js.append(javascript)
                     self._things_already_required[javascript] = "REQ" 
             for css in value[1]:
-                if not self._things_already_required[css]:
+                if not self._things_already_required.has_key(css):
                     self._sorted_css.append(css)
                     self._things_already_required[css] = "REQ"
         # Not a beautiful iteration, but inherited from my times as a
@@ -154,17 +157,25 @@ class HtmlImports(object):
         self._sorted_onload.append(name)
         self._things_already_required[name] = "REQ"
 
-    def ready_set_go(self):
+    def js_export(self):
+        '''This function dispatchs all the javascript files in the _sorted_js
+        variable
+        '''
+        output = ''
+        for js in self._sorted_js:
+            output += '<script type="text/javascript" src="%s"/>' % js[1]
+        return output
+
+    def css_export(self):
         '''This function simply dispatchs all the css files in the _sorted_css variable '''
         self._sorted_css = sorted(self._sorted_css, key = lambda css_package: css_package[2])
         output = ''
         
         for css in self._sorted_css:
             output += '<link rel="stylesheet" type="text/css" href="%s"/>' % css[1]
-        for js in self._sorted_js:
-            output += '<script type="text/javascript" src="%s"/>' % js[1]
-
         return output
+
+
 
 
 
