@@ -55,15 +55,15 @@ relying on some HTML code. For instance:
                        "/static/scripts/add_features_to_a_certain_table.js",
                        depends='jquery')
 
-What about CSS? Maybe there a numerical priority will be enough?
+What about CSS? Maybe there the declaration order will be enough?
 
-    deps_registry.css('deform_css',
-        ["/deform/css/form.css", "/deform/css/theme.css"], priority=100)
+    deps_registry.css('deform1', "/deform/css/form.css")
+    deps_registry.css('deform2', "/deform/css/theme.css")
 
 Actually, if you use, for example, the Deform library, you need to import
 javascript files as well as CSS files, so we have a notion of a package:
 
-    deps_registry.package('deform', css='deform_css',
+    deps_registry.package('deform', css='deform1|deform2',
                           libs='deform', bottom_js=None)
 
 OK, that is all for the registry, done at initialization time.
@@ -81,8 +81,8 @@ and do this kind of thing:
 
     # Use just one library:
     request.page_deps.lib('jquery')
-    # Use just one stylesheet:
-    request.page_deps.css('deform_css')
+    # Use a couple of stylesheets:
+    request.page_deps.css('deform1')
     # Use just one bottom javascript file:
     
     # Or maybe import several stylesheets and javascript libraries:
@@ -185,14 +185,28 @@ class Library(object):
 
 class Stylesheet(object):
     '''Represents a CSS stylesheet file. Used internally.'''
+    def __init__(self, name, url, priority=100):
+        self.url = url
+        self.name = name
+        self.priority = priority
     
+    def __gt__(self, other):
+        '''Compare this Stylesheet instance to another (for sorting).
+        Returns True if this instance is "greater than" the other
+        (meaning it should be placed after the other).'''
+        return self.priority > other.priority
+
+    def __repr__(self):
+        '''Useful for debugging in ipython.'''
+        return '{0}(name="{1}", url="{2}", priority={3})' \
+            .format(type(self), self.name, self.url, self.priority)
 
 
 class DepsRegistry(object):
     '''Should be used at web server initialization time to register every
     javascript and CSS file used by the application.
     
-    The order of registration is important: it must be done bottom-up:
+    The order of registration is important: it must be done bottom-up.
 
         deps_registry = DepsRegistry()
         deps_registry.lib('jquery', "/static/scripts/jquery-1.4.2.min.js")
@@ -222,6 +236,7 @@ class DepsRegistry(object):
         self._css = {}
         self._libs = {}
         self._packages = {}
+        self._css_priority = 0 # this autoincrements :)
     
     def lib(self, name, urls, depends=[]):
         '''If provided, the *depends* argument must be either a list of strings,
@@ -258,12 +273,15 @@ class DepsRegistry(object):
         if lib not in out_list:
             out_list.append(lib)
     
-    def css(self, name, urls, priority=100):
-        self._css[name] = (urls, priority)
+    def css(self, name, urls, priority=None):
+        if isinstance(urls, basestring):
+            urls = urls.split(self.SEP)
+        self._css_priority += 1
+        self._css[name] = Stylesheet(name, urls[self._profile],
+                                     priority or self._css_priority)
     
     def package(self, name, libs=[], css=[]):
         self._packages[name] = (libs, css)
-
 
 
 class PageDeps(object):
@@ -274,10 +292,6 @@ class PageDeps(object):
         self._onloads = []
         self._packages = []
     
-    def onload(self, code):
-        '''Adds some javascript onload code.'''
-        self._onloads.append(code)
-
     def lib(self, name):
         '''Adds a requirement of a javascript library to this page,
         if not already there.
@@ -286,13 +300,23 @@ class PageDeps(object):
         if lib not in self._libs:
             self._libs.append(lib)
 
-    def css(self, name):
+    def one_css(self, name):
         '''Adds a requirement of a CSS stylesheet to this page, if not
         already there.
         '''
-        if name not in self._css:
-            self._css.append(name)
-
+        css = self._reg._css[name]
+        if css not in self._css:
+            self._css.append(css)
+    
+    def css(self, names):
+        '''Adds requirements for a few CSS stylesheets to this page,
+        if not already there.
+        '''
+        if isinstance(names, basestring):
+            names = names.split('|')
+        for name in names:
+            self.one_css(name)
+    
     @property
     def sorted_libs(self):
         '''Recommended for use in your templating language. Returns a list of
@@ -312,10 +336,27 @@ class PageDeps(object):
         '''Returns a string containing the script tags.'''
         return '\n'.join(['<script type="text/javascript" src="{0}"></script>' \
             .format(url) for url in self.sorted_libs])
+    
+    @property
+    def sorted_css(self):
+        '''Recommended for use in your templating language. Returns a list of
+        the URLs for the CSS stylesheets required by this page.
+        '''
+        return [s.url for s in sorted(self._css)]
+    
+    @property
+    def out_css(self):
+        '''Returns a string containing the CSS link tags.'''
+        CSS_TAG = '<link rel="stylesheet" type="text/css" src="{0}" />'
+        return '\n'.join([CSS_TAG.format(url) for url in self.sorted_css])
+        
+    def onload(self, code):
+        '''Adds some javascript onload code.'''
+        self._onloads.append(code)
 
     def package_require(self, name):
-        ''' This function returns the files defined as a package, except those already loaded
-        
+        ''' This function returns the files defined as a package, except
+        those already loaded.
         '''
         if self._things_already_required.has_key(name):
             return True
@@ -339,43 +380,28 @@ class PageDeps(object):
         self._sorted_onload.append(name)
         self._things_already_required[name] = "REQ"
 
-    def js_export(self):
-        '''This function dispatchs all the javascript files in the _sorted_js
-        variable
-        '''
-        output = ''
-        for js in self._sorted_js:
-            output += '<script type="text/javascript" src="%s"/>' % js[1]
-        return output
-
-    def css_export(self):
-        '''This function simply dispatches all the css files in the
-        _sorted_css variable
-        '''
-        self._sorted_css = sorted(self._sorted_css, key = lambda css_package: css_package[2])
-        output = ''
-        
-        for css in self._sorted_css:
-            output += '<link rel="stylesheet" type="text/css" href="%s"/>' % css[1]
-        return output
-
 
 
 '''Tests'''
 if __name__ == '__main__':
     r = DepsRegistry()
     r.lib('jquery', ['http://jquery'])
+    r.css('jquery', 'http://jquery.css')
     r.lib('jquery.ui', 'http://jquery.ui', 'jquery')
     r.lib('jquery.ai', 'http://jquery.ai', 'jquery.ui')
     r.lib('deform', 'http://deform.js', 'jquery')
+    r.css('deform', 'http://deform.css')
     r.lib('triform', 'http://triform.js', 'deform|jquery.ui')
-    print('\n=== Javascript library registry ===')
+    print('\n=== Registry ===')
     from pprint import pprint
     pprint(r._libs)
+    print('\n=== Page ===')
     p = PageDeps(r)
     p.lib('triform')
     p.lib('deform')
     print(p.out_libs)
+    p.css('deform|jquery|deform')
+    print(p.out_css)
 
 
 __feedback__ = '''
