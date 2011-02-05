@@ -44,7 +44,7 @@ The first argument to lib() -- and in fact to the other methods, too --
 is a simple name for you to refer to the item later on.
 
 As you can see, we can declare that deform.js depends on jquery. For more than
-one dependency, you may use a comma:  depends="jquery,jquery.ui"
+one dependency, you may use a list or a pipe:  depends="jquery|jquery.ui"
 
 We also have a concept of a bottom_js: a javascript file that should be
 declared at the bottom of the page, not at the top -- usually not a library,
@@ -80,12 +80,13 @@ After that, controller and view code can easily access the PageDeps instance
 and do this kind of thing:
 
     # Use just one library:
-    request.page_deps.require_lib('jquery')
+    request.page_deps.lib('jquery')
     # Use just one stylesheet:
-    request.page_deps.require_css('deform_css')
+    request.page_deps.css('deform_css')
     # Use just one bottom javascript file:
+    
     # Or maybe import several stylesheets and javascript libraries:
-    request.page_deps.require_package('deform')
+    request.page_deps.package('deform')
 
 Finally, to get the HTML output, you just include this inside the <head>
 element of your master template:
@@ -106,8 +107,41 @@ from __future__ import absolute_import
 from __future__ import print_function   # deletes the print statement
 from __future__ import unicode_literals # unicode by default
 
+try:
+    from functools import total_ordering
+except ImportError:
+    def total_ordering(cls):                                                                                      
+        """Class decorator that fills in missing ordering methods.
+        
+        http://code.activestate.com/recipes/576685/
+        """
+        convert = {
+            b'__lt__': [(b'__gt__', lambda self, other: other < self),
+                       (b'__le__', lambda self, other: not other < self),
+                       (b'__ge__', lambda self, other: not self < other)],
+            b'__le__': [(b'__ge__', lambda self, other: other <= self),
+                       (b'__lt__', lambda self, other: not other <= self),
+                       (b'__gt__', lambda self, other: not self <= other)],
+            b'__gt__': [(b'__lt__', lambda self, other: other > self),
+                       (b'__ge__', lambda self, other: not other > self),
+                       (b'__le__', lambda self, other: not self > other)],
+            b'__ge__': [(b'__le__', lambda self, other: other >= self),
+                       (b'__gt__', lambda self, other: not other >= self),
+                       (b'__lt__', lambda self, other: not self >= other)]
+        }
+        roots = set(dir(cls)) & set(convert)
+        if not roots:
+            raise ValueError('must define at least one ordering operation: < > <= >=')
+        root = max(roots)       # prefer __lt__ to __le__ to __gt__ to __ge__
+        for opname, opfunc in convert[root]:
+            if opname not in roots:
+                opfunc.__name__ = opname
+                opfunc.__doc__ = getattr(int, opname).__doc__
+                setattr(cls, opname, opfunc)
+        return cls
 
-class reify(object):
+
+class reify(object): # TODO: Remove
     """This code was stolen from Pyramid.
     Put the result of a method which uses this (non-data)
     descriptor decorator in the instance dict after the first call,
@@ -128,50 +162,108 @@ class reify(object):
         return val
 
 
+@total_ordering
 class Library(object):
     '''Represents a javascript library. Used internally.'''
-    def __init__(self, name, url, adict, dependencies=None):
+    def __init__(self, name, url, dependencies=None):
         self.url = url
         self.name = name
-        self.adict = adict
-        self.dependency_names = dependencies
+        self.dependencies = dependencies
     
-    @reify
-    def dependencies(self):
-        alist = []
-        for name in self.dependency_names:
-            alist.append(self.adict[name])
-        return alist # of actual Library objects
+    def __gt__(self, other):
+        '''Compare this Library instance to another (for sorting).
+        Returns True if this instance is "greater than" the other
+        (meaning it should be placed after the other).'''
+        return other in self.dependencies
     
-    def __lt__(self, other):
-        '''Compare this Library instance to another (for sorting).'''
-        raise NotImplementedError()
+    def __repr__(self):
+        '''Useful for debugging in ipython.'''
+        return 'Library(name="{0}", url="{1}", dependencies={2})' \
+            .format(self.name, self.url,
+                    [d.name for d in self.dependencies])
+
+
+class Stylesheet(object):
+    '''Represents a CSS stylesheet file. Used internally.'''
+    
 
 
 class DepsRegistry(object):
     '''Should be used at web server initialization time to register every
     javascript and CSS file used by the application.
+    
+    The order of registration is important: it must be done bottom-up:
+
+        deps_registry = DepsRegistry()
+        deps_registry.lib('jquery', "/static/scripts/jquery-1.4.2.min.js")
+        deps_registry.lib('deform', "/static/scripts/deform.js", depends='jquery')
+    
     '''
-    def __init__(self, profile=0):
-        '''*profile* is an integer specifying which index to use from the
-        URL list.
+    SEP = '|'
+    
+    def __init__(self,
+                 profiles='development|production', profile='development'):
+        '''*profiles* is a string containing server profiles separated by
+        a pipe |.
+        *profile* is the selected profile -- it typically comes from
+        a configuration setting.
+        
+        Based on *profiles* and *profile* we select which URL to use for each
+        javascript library.
         '''
-        self._profile = profile
+        i = 0
+        for s in profiles.split(self.SEP):
+            if s == profile:
+                self._profile = i
+            i += 1
+        if not hasattr(self, '_profile'):
+            raise RuntimeError('Profile "{0}" not in "{1}".' \
+                               .format(profile, profiles))
         self._css = {}
         self._libs = {}
         self._packages = {}
     
-    def lib(self, name, urls, depends=None):
+    def lib(self, name, urls, depends=[]):
+        '''If provided, the *depends* argument must be either a list of strings,
+        or one string separated by pipes: |
+        
+        Same can be said of the *urls* parameter.
+        
+        Each of these items must be the name of another library,
+        required for this library to work.
+        '''
         if hasattr(self._libs, name):
             raise RuntimeError \
                 ('Library "{0}" already registered.'.format(name))
-        self._libs[name] = Library(name, urls[self.profile], dependencies)
+        # Recursively list all the dependencies, and
+        # swap dependency names with actual Library objects
+        deplibs = []
+        if isinstance(depends, basestring):
+            depends = depends.split(self.SEP)
+        if depends:
+            for depname in depends:
+                self._recursively_add_deps(depname, deplibs)
+        if isinstance(urls, basestring):
+            urls = urls.split(self.SEP)
+        self._libs[name] = Library(name, urls[self._profile], deplibs)
+
+    def _recursively_add_deps(self, libname, out_list):
+        try:
+            lib = self._libs[libname]
+        except KeyError:
+            raise KeyError('Dependency "{0}" not yet registered.' \
+                           .format(libname))
+        for dep in lib.dependencies:
+            self._recursively_add_deps(dep.name, out_list)
+        if lib not in out_list:
+            out_list.append(lib)
     
     def css(self, name, urls, priority=100):
         self._css[name] = (urls, priority)
     
     def package(self, name, libs=[], css=[]):
         self._packages[name] = (libs, css)
+
 
 
 class PageDeps(object):
@@ -183,16 +275,16 @@ class PageDeps(object):
         self._packages = []
     
     def onload(self, code):
-        '''Adds some javascript onload code.
-        '''
+        '''Adds some javascript onload code.'''
         self._onloads.append(code)
 
     def lib(self, name):
         '''Adds a requirement of a javascript library to this page,
         if not already there.
         '''
-        if name not in self._libs:
-            self._libs.append(name)
+        lib = self._reg._libs[name]
+        if lib not in self._libs:
+            self._libs.append(lib)
 
     def css(self, name):
         '''Adds a requirement of a CSS stylesheet to this page, if not
@@ -203,14 +295,23 @@ class PageDeps(object):
 
     @property
     def sorted_libs(self):
+        '''Recommended for use in your templating language. Returns a list of
+        the URLs for the javascript libraries required by this page.
+        '''
         flat = []
-        for name in self._libs:
-            lib = self._reg._libs[name]
+        for lib in self._libs:
             for dep in lib.dependencies:
-                if dep not in flat:
-                    flat.append(dep)
-        # Now flat contains all the required js files -- multiple times.
-        return sorted(set(flat)) # Well, remove the repetitions and sort
+                if dep.url not in flat:
+                    flat.append(dep.url)
+            if lib.url not in flat:
+                flat.append(lib.url)
+        return flat
+
+    @property
+    def out_libs(self):
+        '''Returns a string containing the script tags.'''
+        return '\n'.join(['<script type="text/javascript" src="{0}"></script>' \
+            .format(url) for url in self.sorted_libs])
 
     def package_require(self, name):
         ''' This function returns the files defined as a package, except those already loaded
@@ -248,7 +349,9 @@ class PageDeps(object):
         return output
 
     def css_export(self):
-        '''This function simply dispatchs all the css files in the _sorted_css variable '''
+        '''This function simply dispatches all the css files in the
+        _sorted_css variable
+        '''
         self._sorted_css = sorted(self._sorted_css, key = lambda css_package: css_package[2])
         output = ''
         
@@ -258,25 +361,21 @@ class PageDeps(object):
 
 
 
-
-
-    def __init__(self): #, registry):
-        #self._reg = registry
-        pass
-        # Checar se há arquivos!
-        # Checar dependências dos arquivos
-        # 
-        # Ordenar os arquivos CSS
-        
-
-
-
-# class HtmlImports(object):
-#     '''Well, how do you like the specification?
-#     nandoflorestan @ #pyramid wants to know  :)    
-#     Aqui é onde tudo é incluído, ordenado e requisitado!
-#     '''
-
+'''Tests'''
+if __name__ == '__main__':
+    r = DepsRegistry()
+    r.lib('jquery', ['http://jquery'])
+    r.lib('jquery.ui', 'http://jquery.ui', 'jquery')
+    r.lib('jquery.ai', 'http://jquery.ai', 'jquery.ui')
+    r.lib('deform', 'http://deform.js', 'jquery')
+    r.lib('triform', 'http://triform.js', 'deform|jquery.ui')
+    print('\n=== Javascript library registry ===')
+    from pprint import pprint
+    pprint(r._libs)
+    p = PageDeps(r)
+    p.lib('triform')
+    p.lib('deform')
+    print(p.out_libs)
 
 
 __feedback__ = '''
