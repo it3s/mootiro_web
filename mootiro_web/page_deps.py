@@ -237,6 +237,7 @@ class DepsRegistry(object):
         for s in profiles.split(self.SEP):
             if s == profile:
                 self._profile = i
+                break
             i += 1
         if not hasattr(self, '_profile'):
             raise RuntimeError('Profile "{0}" not in "{1}".' \
@@ -288,11 +289,15 @@ class DepsRegistry(object):
         self._css[name] = Stylesheet(name, urls[self._profile],
                                      priority or self._css_priority)
 
-    def package(self, name, libs=[], css=[]):
-        self._packages[name] = (libs, css)
+    def package(self, name, libs=[], css=[], onload=''):
+        self._packages[name] = (libs, css, onload)
 
 
 class PageDeps(object):
+    '''Represents the dependencies of a page; i.e. CSS stylesheets,
+    javascript libraries and javascript onload code.
+    Easy to declare and provides the HTML tag soup.
+    '''
     def __init__(self, registry):
         self._reg = registry
         self._css = []
@@ -363,7 +368,7 @@ class PageDeps(object):
     @property
     def out_stylesheets(self):
         '''Returns a string containing the CSS link tags.'''
-        CSS_TAG = '<link rel="stylesheet" type="text/css" src="{0}" />'
+        CSS_TAG = '<link rel="stylesheet" type="text/css" href="{0}" />'
         return '\n'.join([CSS_TAG.format(url) for url in
                           self.sorted_stylesheets])
 
@@ -390,9 +395,13 @@ class PageDeps(object):
 
     def package(self, name):
         '''Require a package.'''
-        libs, css = self._reg._packages[name]
+        libs, css, onload = self._reg._packages[name]
         self.libs(libs)
         self.stylesheets(css)
+        if callable(onload):
+            self.onload(onload())
+        else:
+            self.onload(onload)
 
     def __unicode__(self):
         return '\n'.join([self.out_stylesheets, self.out_libs,
@@ -424,6 +433,9 @@ if __name__ == '__main__':
     print(p.out_onloads(tag=True, jquery=True))
     print('\n=== All ===')
     print(unicode(p))
+
+
+__all__ = ['DepsRegistry', 'PageDeps']
 
 
 __feedback__ = '''
