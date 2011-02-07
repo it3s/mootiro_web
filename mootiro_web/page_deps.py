@@ -148,27 +148,6 @@ except ImportError:
         return cls
 
 
-class reify(object): # TODO: Remove
-    """This code was stolen from Pyramid.
-    Put the result of a method which uses this (non-data)
-    descriptor decorator in the instance dict after the first call,
-    effectively replacing the decorator with an instance variable.
-    """
-    def __init__(self, wrapped):
-        self.wrapped = wrapped
-        try:
-            self.__doc__ = wrapped.__doc__
-        except: # pragma: no cover
-            pass
-
-    def __get__(self, inst, objtype=None):
-        if inst is None:
-            return self
-        val = self.wrapped(inst)
-        setattr(inst, self.wrapped.__name__, val)
-        return val
-
-
 @total_ordering
 class Library(object):
     '''Represents a javascript library. Used internally.'''
@@ -253,6 +232,8 @@ class DepsRegistry(object):
 
         Same can be said of the *urls* parameter.
 
+        If you only provide one url, it is used by all profiles.
+
         Each of these items must be the name of another library,
         required for this library to work.
         '''
@@ -269,7 +250,8 @@ class DepsRegistry(object):
                 self._recursively_add_deps(depname, deplibs)
         if isinstance(urls, basestring):
             urls = urls.split(self.SEP)
-        self._libs[name] = Library(name, urls[self._profile], deplibs)
+        the_url = urls[0] if len(urls) == 1 else urls[self._profile]
+        self._libs[name] = Library(name, the_url, deplibs)
 
     def _recursively_add_deps(self, libname, out_list):
         try:
@@ -283,10 +265,16 @@ class DepsRegistry(object):
             out_list.append(lib)
 
     def stylesheet(self, name, urls, priority=None):
+        '''The *urls* argument must be either a list of strings,
+        or one string separated by pipes: |
+
+        If you only provide one url, it is used by all profiles.
+        '''
         if isinstance(urls, basestring):
             urls = urls.split(self.SEP)
         self._css_priority += 1
-        self._css[name] = Stylesheet(name, urls[self._profile],
+        the_url = urls[0] if len(urls) == 1 else urls[self._profile]
+        self._css[name] = Stylesheet(name, the_url,
                                      priority or self._css_priority)
 
     def package(self, name, libs=[], css=[], onload=''):
