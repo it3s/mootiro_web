@@ -84,7 +84,7 @@ and do this kind of thing:
     # Use a couple of stylesheets:
     request.page_deps.css('deform1')
     # Use just one bottom javascript file:
-    
+
     # Or maybe import several stylesheets and javascript libraries:
     request.page_deps.package('deform')
 
@@ -108,11 +108,16 @@ from __future__ import print_function   # deletes the print statement
 from __future__ import unicode_literals # unicode by default
 
 try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+try:
     from functools import total_ordering
 except ImportError:
-    def total_ordering(cls):                                                                                      
+    def total_ordering(cls):
         """Class decorator that fills in missing ordering methods.
-        
+
         http://code.activestate.com/recipes/576685/
         """
         convert = {
@@ -169,13 +174,13 @@ class Library(object):
         self.url = url
         self.name = name
         self.dependencies = dependencies
-    
+
     def __gt__(self, other):
         '''Compare this Library instance to another (for sorting).
         Returns True if this instance is "greater than" the other
         (meaning it should be placed after the other).'''
         return other in self.dependencies
-    
+
     def __repr__(self):
         '''Useful for debugging in ipython.'''
         return 'Library(name="{0}", url="{1}", dependencies={2})' \
@@ -183,13 +188,14 @@ class Library(object):
                     [d.name for d in self.dependencies])
 
 
+@total_ordering
 class Stylesheet(object):
     '''Represents a CSS stylesheet file. Used internally.'''
     def __init__(self, name, url, priority=100):
         self.url = url
         self.name = name
         self.priority = priority
-    
+
     def __gt__(self, other):
         '''Compare this Stylesheet instance to another (for sorting).
         Returns True if this instance is "greater than" the other
@@ -205,23 +211,23 @@ class Stylesheet(object):
 class DepsRegistry(object):
     '''Should be used at web server initialization time to register every
     javascript and CSS file used by the application.
-    
+
     The order of registration is important: it must be done bottom-up.
 
         deps_registry = DepsRegistry()
         deps_registry.lib('jquery', "/static/scripts/jquery-1.4.2.min.js")
         deps_registry.lib('deform', "/static/scripts/deform.js", depends='jquery')
-    
+
     '''
     SEP = '|'
-    
+
     def __init__(self,
                  profiles='development|production', profile='development'):
         '''*profiles* is a string containing server profiles separated by
         a pipe |.
         *profile* is the selected profile -- it typically comes from
         a configuration setting.
-        
+
         Based on *profiles* and *profile* we select which URL to use for each
         javascript library.
         '''
@@ -237,13 +243,13 @@ class DepsRegistry(object):
         self._libs = {}
         self._packages = {}
         self._css_priority = 0 # this autoincrements :)
-    
+
     def lib(self, name, urls, depends=[]):
         '''If provided, the *depends* argument must be either a list of strings,
         or one string separated by pipes: |
-        
+
         Same can be said of the *urls* parameter.
-        
+
         Each of these items must be the name of another library,
         required for this library to work.
         '''
@@ -272,14 +278,14 @@ class DepsRegistry(object):
             self._recursively_add_deps(dep.name, out_list)
         if lib not in out_list:
             out_list.append(lib)
-    
+
     def css(self, name, urls, priority=None):
         if isinstance(urls, basestring):
             urls = urls.split(self.SEP)
         self._css_priority += 1
         self._css[name] = Stylesheet(name, urls[self._profile],
                                      priority or self._css_priority)
-    
+
     def package(self, name, libs=[], css=[]):
         self._packages[name] = (libs, css)
 
@@ -291,7 +297,7 @@ class PageDeps(object):
         self._libs = []
         self._onloads = []
         self._packages = []
-    
+
     def lib(self, name):
         '''Adds a requirement of a javascript library to this page,
         if not already there.
@@ -300,23 +306,6 @@ class PageDeps(object):
         if lib not in self._libs:
             self._libs.append(lib)
 
-    def one_css(self, name):
-        '''Adds a requirement of a CSS stylesheet to this page, if not
-        already there.
-        '''
-        css = self._reg._css[name]
-        if css not in self._css:
-            self._css.append(css)
-    
-    def css(self, names):
-        '''Adds requirements for a few CSS stylesheets to this page,
-        if not already there.
-        '''
-        if isinstance(names, basestring):
-            names = names.split('|')
-        for name in names:
-            self.one_css(name)
-    
     @property
     def sorted_libs(self):
         '''Recommended for use in your templating language. Returns a list of
@@ -336,23 +325,57 @@ class PageDeps(object):
         '''Returns a string containing the script tags.'''
         return '\n'.join(['<script type="text/javascript" src="{0}"></script>' \
             .format(url) for url in self.sorted_libs])
-    
+
+    def one_css(self, name):
+        '''Adds a requirement of a CSS stylesheet to this page, if not
+        already there.
+        '''
+        css = self._reg._css[name]
+        if css not in self._css:
+            self._css.append(css)
+
+    def css(self, names):
+        '''Adds requirements for a few CSS stylesheets to this page,
+        if not already there.
+        '''
+        if isinstance(names, basestring):
+            names = names.split('|')
+        for name in names:
+            self.one_css(name)
+
     @property
     def sorted_css(self):
         '''Recommended for use in your templating language. Returns a list of
         the URLs for the CSS stylesheets required by this page.
         '''
         return [s.url for s in sorted(self._css)]
-    
+
     @property
     def out_css(self):
         '''Returns a string containing the CSS link tags.'''
         CSS_TAG = '<link rel="stylesheet" type="text/css" src="{0}" />'
         return '\n'.join([CSS_TAG.format(url) for url in self.sorted_css])
-        
+
     def onload(self, code):
         '''Adds some javascript onload code.'''
         self._onloads.append(code)
+
+    def out_onloads(self, tag=False, jquery=False):
+        if not self._onloads:
+            return '\n'
+        s = StringIO()
+        if tag:
+            s.write('<script type="text/javascript">\n')
+        if jquery:
+            s.write('$(function() {\n')
+        for o in self._onloads:
+            s.write(o)
+            s.write('\n')
+        if jquery:
+            s.write('});\n')
+        if tag:
+            s.write('</script>\n')
+        return s.getvalue()
 
     def package_require(self, name):
         ''' This function returns the files defined as a package, except
@@ -360,25 +383,18 @@ class PageDeps(object):
         '''
         if self._things_already_required.has_key(name):
             return True
-        
+
         for key, value in self._packages.items():
             for javascript in value[0]:
                 if not self._things_already_required.has_key(javascript):
                     self._sorted_js.append(javascript)
-                    self._things_already_required[javascript] = "REQ" 
+                    self._things_already_required[javascript] = "REQ"
             for css in value[1]:
                 if not self._things_already_required.has_key(css):
                     self._sorted_css.append(css)
                     self._things_already_required[css] = "REQ"
         # Not a beautiful iteration, but inherited from my times as a
         # C developer
-
-    def onload_require(self, name):
-        if self._things_already_required.has_key(name):
-            return True
-
-        self._sorted_onload.append(name)
-        self._things_already_required[name] = "REQ"
 
 
 
@@ -402,6 +418,8 @@ if __name__ == '__main__':
     print(p.out_libs)
     p.css('deform|jquery|deform')
     print(p.out_css)
+    p.onload('// some javascript code here...')
+    print(p.out_onloads(tag=True, jquery=True))
 
 
 __feedback__ = '''
