@@ -101,6 +101,8 @@ I asked on IRC what other developers thought about this idea, you can read it
 at __feedback__.
 '''
 
+# TODO: Update docs!
+
 
 # http://docs.python.org/whatsnew/pep-328.html
 from __future__ import absolute_import
@@ -279,7 +281,7 @@ class DepsRegistry(object):
         if lib not in out_list:
             out_list.append(lib)
 
-    def css(self, name, urls, priority=None):
+    def stylesheet(self, name, urls, priority=None):
         if isinstance(urls, basestring):
             urls = urls.split(self.SEP)
         self._css_priority += 1
@@ -295,8 +297,7 @@ class PageDeps(object):
         self._reg = registry
         self._css = []
         self._libs = []
-        self._onloads = []
-        self._packages = []
+        self.onloads = []
 
     def lib(self, name):
         '''Adds a requirement of a javascript library to this page,
@@ -305,6 +306,15 @@ class PageDeps(object):
         lib = self._reg._libs[name]
         if lib not in self._libs:
             self._libs.append(lib)
+
+    def libs(self, names):
+        '''Adds requirements for a few javascript libraries to this page,
+        if not already there.
+        '''
+        if isinstance(names, basestring):
+            names = names.split('|')
+        for name in names:
+            self.lib(name)
 
     @property
     def sorted_libs(self):
@@ -326,7 +336,7 @@ class PageDeps(object):
         return '\n'.join(['<script type="text/javascript" src="{0}"></script>' \
             .format(url) for url in self.sorted_libs])
 
-    def one_css(self, name):
+    def stylesheet(self, name):
         '''Adds a requirement of a CSS stylesheet to this page, if not
         already there.
         '''
@@ -334,41 +344,42 @@ class PageDeps(object):
         if css not in self._css:
             self._css.append(css)
 
-    def css(self, names):
+    def stylesheets(self, names):
         '''Adds requirements for a few CSS stylesheets to this page,
         if not already there.
         '''
         if isinstance(names, basestring):
             names = names.split('|')
         for name in names:
-            self.one_css(name)
+            self.stylesheet(name)
 
     @property
-    def sorted_css(self):
+    def sorted_stylesheets(self):
         '''Recommended for use in your templating language. Returns a list of
         the URLs for the CSS stylesheets required by this page.
         '''
         return [s.url for s in sorted(self._css)]
 
     @property
-    def out_css(self):
+    def out_stylesheets(self):
         '''Returns a string containing the CSS link tags.'''
         CSS_TAG = '<link rel="stylesheet" type="text/css" src="{0}" />'
-        return '\n'.join([CSS_TAG.format(url) for url in self.sorted_css])
+        return '\n'.join([CSS_TAG.format(url) for url in
+                          self.sorted_stylesheets])
 
     def onload(self, code):
         '''Adds some javascript onload code.'''
-        self._onloads.append(code)
+        self.onloads.append(code)
 
     def out_onloads(self, tag=False, jquery=False):
-        if not self._onloads:
+        if not self.onloads:
             return '\n'
         s = StringIO()
         if tag:
             s.write('<script type="text/javascript">\n')
         if jquery:
             s.write('$(function() {\n')
-        for o in self._onloads:
+        for o in self.onloads:
             s.write(o)
             s.write('\n')
         if jquery:
@@ -377,49 +388,42 @@ class PageDeps(object):
             s.write('</script>\n')
         return s.getvalue()
 
-    def package_require(self, name):
-        ''' This function returns the files defined as a package, except
-        those already loaded.
-        '''
-        if self._things_already_required.has_key(name):
-            return True
+    def package(self, name):
+        '''Require a package.'''
+        libs, css = self._reg._packages[name]
+        self.libs(libs)
+        self.stylesheets(css)
 
-        for key, value in self._packages.items():
-            for javascript in value[0]:
-                if not self._things_already_required.has_key(javascript):
-                    self._sorted_js.append(javascript)
-                    self._things_already_required[javascript] = "REQ"
-            for css in value[1]:
-                if not self._things_already_required.has_key(css):
-                    self._sorted_css.append(css)
-                    self._things_already_required[css] = "REQ"
-        # Not a beautiful iteration, but inherited from my times as a
-        # C developer
-
+    def __unicode__(self):
+        return '\n'.join([self.out_stylesheets, self.out_libs,
+                          self.out_onloads(tag=True, jquery=True)])
 
 
 '''Tests'''
 if __name__ == '__main__':
     r = DepsRegistry()
     r.lib('jquery', ['http://jquery'])
-    r.css('jquery', 'http://jquery.css')
+    r.stylesheet('jquery', 'http://jquery.css')
     r.lib('jquery.ui', 'http://jquery.ui', 'jquery')
     r.lib('jquery.ai', 'http://jquery.ai', 'jquery.ui')
     r.lib('deform', 'http://deform.js', 'jquery')
-    r.css('deform', 'http://deform.css')
+    r.stylesheet('deform', 'http://deform.css')
     r.lib('triform', 'http://triform.js', 'deform|jquery.ui')
+    r.package('triform', libs='triform', css='deform')
     print('\n=== Registry ===')
     from pprint import pprint
     pprint(r._libs)
     print('\n=== Page ===')
     p = PageDeps(r)
-    p.lib('triform')
-    p.lib('deform')
+    p.package('triform')
+    p.libs('deform')
     print(p.out_libs)
-    p.css('deform|jquery|deform')
-    print(p.out_css)
+    p.stylesheets('deform|jquery|deform')
+    print(p.out_stylesheets)
     p.onload('// some javascript code here...')
     print(p.out_onloads(tag=True, jquery=True))
+    print('\n=== All ===')
+    print(unicode(p))
 
 
 __feedback__ = '''
