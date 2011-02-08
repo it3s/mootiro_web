@@ -6,5 +6,7 @@ It includes a couple of modules for the Pyramid web framework:
 
 * pyramid_genshi allows you to use the Genshi templating system.
 * pyramid_kajiki allows you to use the Kajiki templating system.
+* page_deps allows you to manage HTML dependencies such as javascript
+libraries and CSS stylesheets.
 
 The license is BSD (see the file license.txt).
