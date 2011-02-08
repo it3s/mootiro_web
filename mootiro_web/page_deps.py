@@ -3,17 +3,20 @@
 
 '''page_deps.py
 
-Copyright © 2011 Nando Florestan, Tiago Fassoni, Edgar Alvarenga
+Copyright © 2011 Nando Florestan
+with thanks to Tiago Fassoni and Edgar Alvarenga for valuable feedback.
 
 License: BSD
 
 The problem: script and CSS linking in HTML, using various templates
 ====================================================================
 
-If you develop web applications, you may have found yourself wondering how
-to stop worrying about which stylesheets and javascript libraries
-you should import in a given page, especially when that page is a composition
-of fragments defined in various templates or functions.
+If you develop web applications in Python, and if sometimes you compose a page
+out of fragments defined in various templates or functions, you may have asked
+yourself how to best factor the importing of stylesheets and
+javascript libraries. It feels wrong to use a javascript library in a
+template that consubstantiates a page fragment while declaring the
+<script> imports in another template.
 
 There are 2 sides to this problem.
 Worst of all is not declaring a library that is needed, 'cause then your
@@ -21,13 +24,20 @@ page does not work. But almost as bad is declaring everything you
 might ever need in your master template -- because then, pages that don't need
 heavy javascript libraries will be unnecessarily heavy and slow.
 
-A solution is needed that allows you to first declare what you use, then on
-each specific page, or even page fragment, declare what you need right there,
+A solution is needed that allows you to first register everything you use,
+then on each specific template or view declare what you need right there,
 and the solution would generate the HTML imports, without repeating them.
 
 We also must keep in mind that the order matters. For instance, jquery.ui
 depends on jquery; and CSS has inheritance, so we need to link stylesheets
 in the correct order.
+
+The solution should also work with
+any web framework and any templating language.
+
+I asked on IRC what other developers thought about this idea, you can read it
+at __feedback__ in this module.
+
 
 The solution: PageDeps
 ======================
@@ -36,72 +46,147 @@ The following couple of classes are an attempt to solve that problem.
 First of all, while you configure the application, you declare the files
 that might be imported:
 
-    deps_registry = DepsRegistry()
-    deps_registry.lib('jquery', "/static/scripts/jquery-1.4.2.min.js")
-    deps_registry.lib('deform', "/static/scripts/deform.js", depends='jquery')
+    deps = DepsRegistry()
+    deps.lib('jquery', "/static/scripts/jquery-1.4.2.min.js")
+    deps.lib('deform', "/static/scripts/deform.js", depends='jquery')
 
 The first argument to lib() -- and in fact to the other methods, too --
 is a simple name for you to refer to the item later on.
 
 As you can see, we can declare that deform.js depends on jquery. For more than
-one dependency, you may use a list or a pipe:  depends="jquery|jquery.ui"
+one dependency, you may use a list, tuple or a pipe-separated string:
 
-We also have a concept of a bottom_js: a javascript file that should be
-declared at the bottom of the page, not at the top -- usually not a library,
-but something "ad hoc" that might use libraries but might execute immediately,
-relying on some HTML code. For instance:
-
-    deps_registry.bottom_js('adhoctable',
-                       "/static/scripts/add_features_to_a_certain_table.js",
-                       depends='jquery')
+    depends=('jquery', 'jquery.ui')
+    # or
+    depends='jquery|jquery.ui'
 
 What about CSS? Maybe there the declaration order will be enough?
 
-    deps_registry.css('deform1', "/deform/css/form.css")
-    deps_registry.css('deform2', "/deform/css/theme.css")
+    deps.stylesheet('deform1', "/deform/css/form.css")
+    deps.stylesheet('deform2', "/deform/css/theme.css")
+
+We keep track of the order the stylesheets are declared in,
+and use that order later when outputting your <head> imports.
 
 Actually, if you use, for example, the Deform library, you need to import
-javascript files as well as CSS files, so we have a notion of a package:
+javascript files as well as CSS files, so we have a notion of a *package*:
 
-    deps_registry.package('deform', css='deform1|deform2',
-                          libs='deform', bottom_js=None)
+    deps.package('deform', libs='deform', css='deform1|deform2',
+                 onload='deform.load();')
+
+We also have a concept of "onload" javascript fragment: a few lines of JS code
+that should probably be declared at the bottom of the page --
+something "ad hoc" that might use libraries and execute immediately,
+as in the example above.
 
 OK, that is all for the registry, done at initialization time.
 
-Now, for each new request, make sure your web framework instantiates
-a PageDeps, passing it the deps_registry, and make it available to
+But web servers are usually threaded and we cannot confuse the needs of
+one page being served with another. So now, for each new request,
+make sure your web framework instantiates a PageDeps,
+passing it the DepsRegistry instance we built above, and make it available to
 controllers and templates. For instance, in the Pyramid web framework:
 
     @subscriber(interfaces.INewRequest)
     def on_new_request(event):
-        event.request.page_deps = PageDeps(deps_registry)
+        event.request.page_deps = PageDeps(deps)
 
-After that, controller and view code can easily access the PageDeps instance
+After that, controller/view code -- as well as templates, in some more
+powerful templating languages -- can easily access the PageDeps instance
 and do this kind of thing:
 
     # Use just one library:
     request.page_deps.lib('jquery')
+    # Use 2 or more libraries:
+    request.page_deps.libs(('jquery.ui', 'deform'))
     # Use a couple of stylesheets:
-    request.page_deps.css('deform1')
-    # Use just one bottom javascript file:
-
-    # Or maybe import several stylesheets and javascript libraries:
+    request.page_deps.stylesheets('deform1|deform2')
+    # Or maybe import several stylesheets and javascript libraries at once:
     request.page_deps.package('deform')
+
+A file can be requested more than once, but it will appear in the HTML
+output only once and in the correct order.
 
 Finally, to get the HTML output, you just include this inside the <head>
 element of your master template:
 
-    ${literal(request.page_deps.render_head())}
+    ${Markup(request.page_deps.out_stylesheets)}
+    ${Markup(request.page_deps.out_libs)}
+    </head>
 
 ...and this at the bottom of the master template, for eventual javascript:
 
-    ${literal(request.page_deps.render_bottom())}
+    ${Markup(request.page_deps.out_onloads(tag=True))}
+    </body>
 
-I asked on IRC what other developers thought about this idea, you can read it
-at __feedback__.
+Alternatively, you can simply get lists of URLs (already sorted):
+
+    request.page_deps.sorted_stylesheets
+    request.page_deps.sorted_libs
+
+...where "Markup" is whatever function your templating language uses to
+mark a string as a literal, so it won't be escaped. ("Markup" is from Genshi.)
+
+
+A caveat
+========
+
+You are of course on your own to ensure that the code that outputs the
+HTML soup runs *after* all the code that declares requirements for
+libs and stylesheets. (How to do so depends on the templating language
+being used.)
+
+Therefore, there are 4 moments that should never be confused:
+
+* Declaration of all available libs and stylesheets (and their proper order),
+done as the web server starts, with the DepsRegistry class;
+* In the scope of one request, instantiation of a PageDeps,
+which is made available to the system;
+* Declaration of what is needed by the current request (possible in various
+places);
+* Output.
+
+
+Deployment profiles
+===================
+
+Sometimes you want to use one version of a javascript library in development
+(for debugging), but a compressed version in production (for speed).
+You might have even more than these 2 deployment scenarios.
+
+For this purpose, you pass your deployment profiles' names, as well as the
+currently configured profile, to the DepsRegistry constructor:
+
+    deps = DepsRegistry(profiles='development|cdn|static',
+                        profile=settings.get('page_deps.profile', 'cdn'))
+
+The above code declares 3 profiles (development, CDN and static),
+and passes as the "profile" argument a string, taken from a configuration file,
+corresponding to the currently activated profile (the default being 'cdn').
+
+Now you can pass more than one string as the URL of your libs and stylesheets:
+
+    deps.lib('jquery', ('/static/lib/jquery-1.5.js',
+        'https://ajax.googleapis.com/ajax/libs/jquery/1.5.0/jquery.min.js',
+        '/static/lib/jquery-1.5.min.js'))
+
+The order of the above URLs corresponds to the order of the declared
+deployment profiles, e.g., the first is for development, the second is a CDN,
+and the last is static.
+
+Because the order is the same, DepsRegistry knows which URL to actually use.
+
+This way you can declare the libraries once in your code, in a centralized
+place, but easily configure which one is used based on
+the deployment configuration.
+
+
+Questions?
+==========
+
+For feature requests and bug reports, please visit
+https://github.com/it3s/mootiro_web/issues
 '''
-
-# TODO: Update docs!
 
 
 # http://docs.python.org/whatsnew/pep-328.html
@@ -301,7 +386,7 @@ class PageDeps(object):
             self._libs.append(lib)
 
     def libs(self, names):
-        '''Adds requirements for a few javascript libraries to this page,
+        '''Adds requirements for one or more javascript libraries to this page,
         if not already there.
         '''
         if isinstance(names, basestring):
@@ -364,19 +449,21 @@ class PageDeps(object):
         '''Adds some javascript onload code.'''
         self.onloads.append(code)
 
-    def out_onloads(self, tag=False, jquery=False):
+    def out_onloads(self, tag=False):
+        # TODO: If jquery has been requested, maybe we should detect it here
+        # and uncomment the following comments.
         if not self.onloads:
             return '\n'
         s = StringIO()
         if tag:
             s.write('<script type="text/javascript">\n')
-        if jquery:
-            s.write('$(function() {\n')
+        #if jquery:
+        #    s.write('$(function() {\n')
         for o in self.onloads:
             s.write(o)
             s.write('\n')
-        if jquery:
-            s.write('});\n')
+        #if jquery:
+        #    s.write('});\n')
         if tag:
             s.write('</script>\n')
         return s.getvalue()
@@ -393,7 +480,7 @@ class PageDeps(object):
 
     def __unicode__(self):
         return '\n'.join([self.out_stylesheets, self.out_libs,
-                          self.out_onloads(tag=True, jquery=True)])
+                          self.out_onloads(tag=True)])
 
 
 '''Tests'''
@@ -418,7 +505,7 @@ if __name__ == '__main__':
     p.stylesheets('deform|jquery|deform')
     print(p.out_stylesheets)
     p.onload('// some javascript code here...')
-    print(p.out_onloads(tag=True, jquery=True))
+    print(p.out_onloads(tag=True))
     print('\n=== All ===')
     print(unicode(p))
 
@@ -429,8 +516,8 @@ __all__ = ['DepsRegistry', 'PageDeps']
 __feedback__ = '''
 <nandoflorestan> Does anyone know any code for creating a kind of registry for CSS imports and/or JavaScript imports, and dynamically dealing with their dependencies?
 <benbangert> nandoflorestan: not offhand, toscawidgets has some stuff to try and track repeat CSS/JS includes and such
-<nandoflorestan> http://code.google.com/p/bag/source/browse/bag/web/html_imports.py
-
+<nandoflorestan> Here is a specification I wrote for such a library:
+(...)
 <benbangert> nandoflorestan: I guess the reason I shy away from that is its inefficient to have a bunch of CSS/JS links on a page
 <benbangert> I usually put all the JS required for the entire site together in one file, minimize the crap out of it, and serve it once with a super long expires
 <benbangert> same with CSS
@@ -454,10 +541,4 @@ __feedback__ = '''
 <nandoflorestan> just tell me how so, just so I know we are on the same page here
 <ScottA> Pure semantics. There's some javascript stuff I like to stick in the head that isn't library code. jQuery(document).ready(), data structures, that sort of thing
 <nandoflorestan> ScottA, thanks, I understand it better after what you said.
-<nandoflorestan> oh wait, what about javascript literals (not external files)
-<nandoflorestan> I guess those are out of the scope huh
-<ScottA> Probably
-<ScottA> You could accept python data structures and convert then to JSON, maybe
-<ScottA> Might be useful for people who like to use dynamic javascript
 '''
-
