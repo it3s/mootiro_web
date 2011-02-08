@@ -39,10 +39,10 @@ I asked on IRC what other developers thought about this idea, you can read it
 at __feedback__ in this module.
 
 
-The solution: PageDeps
-======================
+My solution: PageDeps
+=====================
 
-The following couple of classes are an attempt to solve that problem.
+The following couple of classes are an attempt to solve the described problem.
 First of all, while you configure the application, you declare the files
 that might be imported:
 
@@ -186,6 +186,22 @@ Questions?
 
 For feature requests and bug reports, please visit
 https://github.com/it3s/mootiro_web/issues
+
+
+In time: There is an alternative to this
+========================================
+
+After I wrote this module someone showed me Fanstatic:
+http://fanstatic.org
+
+Fanstatic solves this problem while being a WSGI middleware.
+We have preferred to deal with the problem at the application level.
+
+I haven't tried Fanstatic yet... it seems a little over-engineered...
+using Python eggs to describe javascript libraries? My solution is
+the simplest thing that works.
+
+But "Fanstatic" is a much more creative name, I envy that :)
 '''
 
 
