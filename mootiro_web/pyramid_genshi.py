@@ -97,6 +97,7 @@ class GenshiTemplateRenderer(object):
         self.loader = TemplateLoader(paths,
                       auto_reload = asbool(settings.get('reload_templates')),
                       callback = callback)
+        self.strip_whitespace = settings.get('genshi.strip_whitespace', True)
         self.encoding = settings.get('genshi.encoding', 'utf-8')
         self.doctype = settings.get('genshi.doctype', 'html5')
         self.method = settings.get('genshi.method', 'xhtml')
@@ -127,7 +128,8 @@ class GenshiTemplateRenderer(object):
         return template.generate(**system) \
             .render(method=self.method,
                     encoding=self.encoding,
-                    doctype=self.doctype)
+                    doctype=self.doctype,
+                    strip_whitespace=self.strip_whitespace)
 
     def fragment(self, template_file, dic):
         """Loads a Genshi template and returns its output as a unicode object
