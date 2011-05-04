@@ -21,6 +21,10 @@ setup(
     author_email = "team@it3s.org",
     download_url = "https://github.com/it3s/mootiro_web",
     description = "A library for many purposes",
+    entry_points = '''
+[babel.extractors]
+jquery_templates = mootiro_web.transecma:extract_jquery_templates
+''',
     zip_safe = False,
     keywords = ["python", 'HTML', 'Pyramid', 'web'],
     classifiers = [ # http://pypi.python.org/pypi?:action=list_classifiers
