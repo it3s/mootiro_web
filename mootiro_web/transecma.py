@@ -149,11 +149,11 @@ def po2json_command():
 
     Example usage:
 
-        po2json.py -D $DOMAIN -d $OUTDIR -o $JS_DIR -n mfTranslations
+        po2json -D $DOMAIN -d $OUTDIR -o $JS_DIR -n mfTranslations
 
     For help with the arguments, type:
 
-        po2json.py -h
+        po2json -h
     '''
     from argparse import ArgumentParser
     p = ArgumentParser(description='Converts .po files into .js files ' \
@@ -170,6 +170,9 @@ def po2json_command():
     p.add_argument('--variable', '-n', dest='variable_name', default=None,
                    help="javascript variable name for the translations object")
     d = p.parse_args()
+    if not d.dir:
+        p.print_usage()
+        return
     compile_dir(d.dir, d.domain, d.out_dir, variable_name=d.variable_name,
                 use_fuzzy=d.use_fuzzy)
 
