@@ -24,6 +24,9 @@ setup(
     entry_points = '''
 [babel.extractors]
 jquery_templates = mootiro_web.transecma:extract_jquery_templates
+
+[console_scripts]
+po2json = mootiro_web.transecma:po2json_command
 ''',
     zip_safe = False,
     keywords = ["python", 'HTML', 'Pyramid', 'web'],
