@@ -55,15 +55,10 @@ function Transecma(tt) {
     // The argument must be a dictionary containing the translations.
     o = {
         translate: function (msg1, msg2, n) {
-            if (!n || n == 1)
-                var s = new String(tt[msg1] || msg1);
+            if (n == null || n == 1)
+                return tt[msg1] || msg1;
             else
-                var s = new String(tt[msg2] || msg2);
-            // I created a new String because now I add a few attributes
-            s.singular = msg1;
-            s.plural = msg2;
-            s.n = n;
-            return s;
+                return tt[msg2] || msg2;
         }
     };
     return o;
