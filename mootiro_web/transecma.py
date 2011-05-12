@@ -34,6 +34,8 @@ from __future__ import unicode_literals  # unicode by default
 import os
 import re
 
+here = os.path.abspath(os.path.dirname(__file__))
+
 
 def exists(path):
     """Test whether a path exists.  Returns False for broken symbolic links.
@@ -122,8 +124,22 @@ def po2json(po_path, locale, variable_name=None, use_fuzzy=None):
 
 
 def compile_dir(dir, domain, out_dir, variable_name=None, use_fuzzy=None,
-                encoding='utf8'):
+                encoding='utf8', include_lib=False):
+    '''Given a `dir`, goes through all locale subdirectories in it,
+    reads the .po translation files pertaining to `domain`, and then converts
+    the translations to javascript files, which are written out to the
+    directory `out_dir` and assigned to a `variable_name`.
+
+    If `include_lib` is True, the contents of transecma.js are appended to
+    the end of each of the output files.
+    '''
     import codecs
+    if include_lib:
+        with codecs.open(os.path.join(here, 'transecma.js'),
+                         encoding='utf8') as f:
+            lib = f.read()
+    else:
+        lib = ''
     jobs = []
     if not exists(out_dir):
         os.makedirs(out_dir)
@@ -138,6 +154,9 @@ def compile_dir(dir, domain, out_dir, variable_name=None, use_fuzzy=None,
             use_fuzzy=use_fuzzy)
         with codecs.open(out_path, 'w', encoding=encoding) as writer:
             writer.write(s)
+            if include_lib:
+                writer.write('\n')
+                writer.write(lib)
 
 
 def po2json_command():
@@ -169,12 +188,14 @@ def po2json_command():
                    help='also include fuzzy translations (default %(default)s)')
     p.add_argument('--variable', '-n', dest='variable_name', default=None,
                    help="javascript variable name for the translations object")
+    p.add_argument('--include-lib', '-i', dest='include_lib', default=False,
+                action='store_true', help='include transecma.js in the output')
     d = p.parse_args()
     if not d.dir:
         p.print_usage()
         return
     compile_dir(d.dir, d.domain, d.out_dir, variable_name=d.variable_name,
-                use_fuzzy=d.use_fuzzy)
+                use_fuzzy=d.use_fuzzy, include_lib=d.include_lib)
 
 
 if __name__ == '__main__':
