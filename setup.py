@@ -14,6 +14,7 @@ setup(
     version = '0.1.0',
     license = 'BSD',
     packages = find_packages(),
+    package_data = {'': ['*.txt', '*.js']},
     author_email = "team@it3s.org",
     download_url = "https://github.com/it3s/mootiro_web",
     description = "A library for many purposes",
