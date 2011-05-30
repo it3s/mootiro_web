@@ -8,15 +8,15 @@
 from setuptools import setup, find_packages
 
 setup(
-    url = 'https://github.com/it3s/mootiro_web/downloads',
     name = "mootiro_web",
+    version = '0.1.0',
+    url = 'https://github.com/it3s/mootiro_web',
+    download_url = "https://github.com/it3s/mootiro_web/downloads",
     author = 'The IT3S team',
-    version = '0.1.1',
     license = 'BSD',
     packages = find_packages(),
     package_data = {'': ['*.txt', '*.js']},
     author_email = "team@it3s.org",
-    download_url = "https://github.com/it3s/mootiro_web",
     description = "Library for web development, containing javascript i18n " \
                   "and stuff for the Pyramid web framework.",
     entry_points = '''
