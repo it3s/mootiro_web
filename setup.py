@@ -8,10 +8,10 @@
 from setuptools import setup, find_packages
 
 setup(
-    url = 'https://github.com/it3s/mootiro_web',
+    url = 'https://github.com/it3s/mootiro_web/downloads',
     name = "mootiro_web",
     author = 'The IT3S team',
-    version = '0.1.0',
+    version = '0.1.1',
     license = 'BSD',
     packages = find_packages(),
     package_data = {'': ['*.txt', '*.js']},
