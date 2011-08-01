@@ -3,6 +3,7 @@
 from __future__ import unicode_literals  # unicode by default
 import os
 import stat
+from pyramid.config import Configurator
 
 
 def isdir(s):
@@ -36,7 +37,9 @@ class PyramidStarter(object):
         self.name = name
         if require_python27:
             self.require_python27()
-        if isinstance(config, dict):
+        if isinstance(config, Configurator):
+            self.config = config
+        else:
             self.make_config(config, settings)
         self.directory = os.path.abspath(os.path.dirname(__file__))
         self.parent_directory = os.path.dirname(self.directory)
@@ -52,9 +55,8 @@ class PyramidStarter(object):
         `adict` should contain request_factory, session_factory,
         authentication_policy, authorization_policy etc.
         """
-        from pyramid.config import Configurator
         adict.setdefault('settings', settings)
-        self.config = config = Configurator(**adict)
+        self.config = Configurator(**adict)
 
     @property
     def settings(self):
