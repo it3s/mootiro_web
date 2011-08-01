@@ -24,24 +24,30 @@ def makedirs(s):
 class PyramidStarter(object):
     '''Reusable configurator for nice Pyramid applications.'''
 
-    def __init__ (self, name, __file__, settings, config,
+    def __init__ (self, name, appfile, settings, config, packages=[],
                   require_python27=False):
-        '''The first positional argument should be, simply, __file__ (in other
-        words, a string containing the path to the file that represents the
-        Pyramid app).
+        '''Arguments:
 
         `name` is the name of your package;
+        `appfile` should be, simply, __file__ (in other
+        words, a string containing the path to the file that represents the
+        Pyramid app).
+        `settings` is the dictionary, provided by Pyramid, containing the
+        configuration for the application as read from config files.
         `config` is the Pyramid configurator instance, or a dictionary that
         can be used to create such an instance.
+        `packages` is a sequence of additional packages that should be
+        scanned/enabled.
         '''
         self.name = name
+        self.packages = packages
         if require_python27:
             self.require_python27()
         if isinstance(config, Configurator):
             self.config = config
         else:
             self.make_config(config, settings)
-        self.directory = os.path.abspath(os.path.dirname(__file__))
+        self.directory = os.path.abspath(os.path.dirname(appfile))
         self.parent_directory = os.path.dirname(self.directory)
         from importlib import import_module
         self.module = import_module(self.name)
@@ -81,6 +87,8 @@ class PyramidStarter(object):
         self.config.include(includeme)
         if scan:
             self.config.scan(self.name)
+            for p in self.packages:
+                self.config.scan(p)
 
     def enable_sqlalchemy(self, initialize_sql=None):
         from sqlalchemy import engine_from_config
