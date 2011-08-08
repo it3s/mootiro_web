@@ -4,6 +4,7 @@ from __future__ import unicode_literals  # unicode by default
 import os
 import stat
 from pyramid.config import Configurator
+from pyramid.decorator import reify
 
 
 def isdir(s):
@@ -54,6 +55,29 @@ class PyramidStarter(object):
         # Create the _() function for internationalization
         from pyramid.i18n import TranslationStringFactory
         self._ = TranslationStringFactory(name)
+        self._enable_locales()
+
+    def _enable_locales(self):
+        '''Gets a list of enabled locale names from settings, checks it
+        against our known locales and stores in settings a list containing
+        not only the locale names but also texts for links for changing the
+        locale.
+        '''
+        # Get a list of enabled locale names from settings
+        settings = self.settings
+        locales_filter = settings.get('enabled_locales', 'en').split(' ')
+        # Check the settings against a list of supported locales
+        supported_locales = [dict(name='en', title='Change to English'),
+                             dict(name='en_DEV', title='Change to dev slang'),
+                             dict(name='pt_BR', title='Mudar para português')]
+        # The above list must be updated when new languages are added
+        enabled_locales = []
+        for locale in locales_filter:
+            for adict in supported_locales:
+                if locale == adict['name']:
+                    enabled_locales.append(adict)
+        # Replace the setting
+        settings['enabled_locales'] = enabled_locales
 
     def make_config(self, adict, settings):
         """Creates *config*, a temporary wrapper of the registry.
@@ -131,6 +155,10 @@ class PyramidStarter(object):
         from mootiro_web.pyramid_genshi import renderer_factory
         self.config.add_renderer('.genshi', renderer_factory)
 
+    def enable_deform(self, template_dirs):
+        from .pyramid_deform import setup
+        setup(template_dirs)
+
     def configure_favicon(self, path='static/icon/32.png'):
         from mimetypes import guess_type
         from pyramid.resource import abspath_from_resource_spec
@@ -144,6 +172,41 @@ class PyramidStarter(object):
             *extra_translation_dirs)
         # from pyramid.i18n import default_locale_negotiator
         # self.config.set_locale_negotiator(default_locale_negotiator)
+
+    def set_template_globals(self, fn=None):
+        '''Intended to be overridden in subclasses.'''
+        from pyramid import interfaces
+        from pyramid.events import subscriber
+        from pyramid.i18n import get_localizer, get_locale_name
+        from pyramid.url import route_url, static_url
+        package_name = self.name
+
+        def template_globals(event):
+            '''Adds stuff we use all the time to template context.
+            There is no need to add *request* since it is already there.
+            '''
+            request = event['request']
+            settings = request.registry.settings
+            # A nicer "route_url": no need to pass it the request object.
+            event['url'] = lambda name, *a, **kw: \
+                                  route_url(name, request, *a, **kw)
+            event['base_path'] = settings.get('base_path', '/')
+            event['static_url'] = lambda s: static_url(s, request)
+            event['locale_name'] = get_locale_name(request)  # to set xml:lang
+            event['enabled_locales'] = settings['enabled_locales']
+            # http://docs.pylonsproject.org/projects/pyramid_cookbook/dev/i18n.html
+            localizer = get_localizer(request)
+            translate = localizer.translate
+            pluralize = localizer.pluralize
+            event['_'] = lambda text, mapping=None: \
+                         translate(text, domain=package_name, mapping=mapping)
+            event['plur'] = lambda singular, plural, n, mapping=None: \
+                            pluralize(singular, plural, n,
+                                      domain=package_name, mapping=mapping)
+
+        self.config.add_subscriber(fn or template_globals,
+                                   interfaces.IBeforeRender,
+        )
 
     def result(self):
         '''Commits the configuration (this causes some tests) and returns the

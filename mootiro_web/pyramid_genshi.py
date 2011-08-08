@@ -77,8 +77,11 @@ class GenshiTemplateRenderer(object):
         '''
         from genshi.template import TemplateLoader
         settings = info.settings
-        paths = [abspath_from_resource_spec(p) for p in \
-                to_list(settings['genshi.directories'])]
+        try:
+            dirs = settings['genshi.directories']
+        except KeyError:
+            raise KeyError('You need to configure genshi.directories.')
+        paths = [abspath_from_resource_spec(p) for p in to_list(dirs)]
         # http://genshi.edgewall.org/wiki/Documentation/i18n.html
         # If genshi.translation_domain is configured,
         # we set up a callback in the loader
