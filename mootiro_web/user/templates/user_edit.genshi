@@ -1,0 +1,102 @@
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      py:strip=''>
+<?python
+    request.page_deps.package('deform')
+    request.page_deps.package('jquery.ui')
+?>
+  <py:def function="logged_head()">
+    <style type="text/css">
+       #changePassword .description {
+            display: inline-block;
+            width: 190px;
+            vertical-align: top;
+            }
+    </style>
+  </py:def>
+  <py:def function="content()">
+    <h1 py:content='pagetitle' />
+    <p py:if="not request.user">Welcome to Mootiro!<br />
+      Fill in the fields below to sign up.
+    </p>
+    ${Markup(user_form)}
+    <div id="changePassword" title="Change password" style="padding: 0;"/>
+    <div id="deleteuserform" title="Delete account" style="display:none">
+      <span>On closing your account you will permanently lose all application data associated with it. This action can not be undone. Do you really want to delete your account?</span>
+      <form id='deleteUserForm' method='post' action='/user/delete' />
+    </div>
+    <script type="text/javascript">
+        var changePassword = function () {
+            $.post('/user/edit_password',
+                $('#passwordform').serialize(),
+                function (response) {
+                    if (response.changed) {
+                        $('#changePassword').dialog('close');
+                    } else {
+                        $('#changePassword').html(response);
+                        $('input[type=password]')[0].focus();
+                    }
+            });
+        }
+        $('#changePasswordLink').click(function () {
+            $('#changePassword').load('/user/edit_password', function () {
+            $('#changePassword').dialog({
+                resizable: false,
+                width: 'auto',
+                minHeight: '400px',
+                modal: true,
+                buttons: [
+                    {
+                    text: '${_('Change password')}',
+                    id: 'changePasswordBtn',
+                    click: changePassword
+                    },
+                    {
+                    text: '${_('Cancel')}',
+                    id: 'cancelBtn',
+                    click: function() {$(this).dialog('close');}
+                    }
+                ],
+                open: function() {
+                    $("#changePasswordBtn").button(
+                            {icons: {primary:'ui-icon-custom-check'}});
+                }
+            });
+          });
+        });
+    </script>
+    <script type="text/javascript">
+    $('#deleteUserLink').click(function() {
+        $("#deleteuserform").dialog({
+            resizable: false,
+            minHeight:'auto',
+            modal: true,
+            buttons: [
+                {
+                text: _("Delete User"),
+                id: "deleteBtn",
+                click: function() {
+                    $('#deleteUserForm').submit();
+                    $(this).dialog("close");
+                    }
+                },
+                {
+                text:_("Cancel"),
+                id: "canclBtn",
+                click: function() {
+                    $(this).dialog("close");
+                    }
+                }
+            ],
+            open: function() {
+                $("#canclBtn").button().focus();
+                $("#deleteBtn").button(
+                        {icons: {primary:'ui-icon-custom-delete'}});
+            }
+        });
+    });
+    </script>
+  </py:def>
+  <xi:include href="master_cover.genshi" />
+</html>

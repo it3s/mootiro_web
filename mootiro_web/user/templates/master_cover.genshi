@@ -1,0 +1,115 @@
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      py:strip=''>
+
+<?python
+from pyramid.i18n import get_locale_name
+locale_name = get_locale_name(request)
+
+
+pd = request.page_deps
+pd.onload('''
+  $(document).ready(function(){
+    $('#header_links').hover(function() {
+      $(this).toggleClass('menu-active');
+    });
+  });
+''')
+
+?>
+
+<py:def function="in_head()">
+  <py:if test="defined('logged_head')">${logged_head()}</py:if>
+</py:def>
+
+<py:def function="locales()">
+  <py:for each="loc in enabled_locales">
+    <a href="${url('locale', locale=loc['name'])}"
+       title="${loc['title']}"
+       py:strip="locale_name == loc['name']"
+       py:content="loc['name'][:2]" />
+    <span py:if="not loc is enabled_locales[-1]" id='Bar'>|</span>
+  </py:for>
+</py:def>
+
+<py:def function="in_body()">
+  <div id="Centralizer">
+    <div id="Top" class="Unlogged" py:if="not request.user">
+      <div id="Menu">
+        <table>
+          <tr>
+            <py:if test="locale_name == 'pt_BR'">
+            <td><a href="http://mootiro.org/form/pt-br/">Home</a></td>
+            <td><a href="http://mootiro.org/form/pt-br/ajuda">Help</a></td>
+            <td><a href="http://mootiro.org/form/pt-br/baixar">Download</a></td>
+            <td><a href="http://mootiro.org/form/pt-br/contribua">Contribute</a></td>
+            <td><a href="http://mootiro.org/form/pt-br/contact">Contact</a></td>
+            </py:if>
+            <py:if test="locale_name != 'pt_BR'">
+            <td><a href="http://mootiro.org/form/en">Home</a></td>
+            <td><a href="http://mootiro.org/form/en/help">Help</a></td>
+            <td><a href="http://mootiro.org/form/en/download">Download</a></td>
+            <td><a href="http://mootiro.org/form/en/contribute">Contribute</a></td>
+            <td><a href="http://mootiro.org/form/en/contact">Contact</a></td>
+            </py:if>
+          </tr>
+        </table>
+      </div>
+      <img id="Logo" src="${static_url('mootiro_web.user:static/img/logo.png')}"
+        alt='MootiroForm' title='MootiroForm' />
+    </div>
+
+    <div id="Top" class="Logged" py:if="request.user">
+      <div id="Menu">
+        <table>
+          <tr>
+            <td id="Logo">
+                <img alt='MootiroForm' title='MootiroForm'
+                     src="${static_url('mootiro_form:static/img/minimalist_logo.png')}"/>
+            </td>
+            <td><a href='/' title='Manage my forms'>My forms</a></td>
+            <!--! td><a href='#' title='Administrate your reports'>My reports</a></td> -->
+            <py:if test="locale_name == 'pt_BR'">
+                <td><a href='http://mootiro.org/form/pt-br/ajuda' title='Do you need help?'>Help</a></td>
+                <td><a href="http://mootiro.org/form/pt-br/contact">Contact</a></td>
+            </py:if>
+            <py:if test="locale_name != 'pt_BR'">
+                <td><a href='http://mootiro.org/form/en/help' title='Do you need help?'>Help</a></td>
+                <td><a href="http://mootiro.org/form/en/contact">Contact</a></td>
+            </py:if>
+            <td class="Submenu">
+              <ul>
+                <li class="title" ><a href="#">Settings</a></li>
+                <li><a href="${url('user', action='current')}">Account</a></li>
+                <!--! <li><a href="#">profile</a></li> -->
+                <!--! li><a href="#">preferences</a></li> -->
+              </ul>
+            </td>
+            <td class="Submenu">
+              ${login_box()}
+            </td>
+          </tr>
+        </table>
+      </div>
+     <div class='Locales'>
+       ${locales()}
+     </div>
+     <div id='LocalesLeft'/>
+    </div>
+
+    <div id="Content" py:if="defined('content')">
+      ${content()}
+    </div>
+
+    <div id="Footer">Copyright © 2011
+      <a target='_blank' href='http://it3s.org'>it3s</a>
+      <div py:if="not request.user" >
+        ${locales()}
+      </div>
+    </div>
+  </div>
+</py:def>
+
+<xi:include href="master_global.genshi" />
+</html>

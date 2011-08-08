@@ -1,0 +1,52 @@
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      py:strip=''>
+<?python
+from mootiro_form import __appname__ as appname
+request.page_deps.package('deform')
+?>
+
+<py:def function="content()">
+  <h1 py:content='pagetitle' />
+  <p><a href="${url('user', action='new')}"
+    >If you don't have an account yet, click here to sign up.</a></p>
+
+  <!--! We do not use Deform anymore because when the credentials were wrong,
+  the (wrong) password was being sent to the client in the HTML.
+  I consider this a (minor) security problem. -->
+  <form id="userform" action="${action}" method="POST"
+      enctype="multipart/form-data" class="deform">
+    <fieldset class="deformFormFieldset">
+      <ul>
+        <li class="errorLi" py:if="error_form or error_email or error_password">
+          <h3 class="errorMsgLbl">There was a problem with your submission</h3>
+          <p class="errorMsg" py:content="error_form" />
+        </li>
+        <li id="item-login_email" class="${'error' if error_email else None}">
+          <label class="desc" for="login_email">Email
+            <span class="req">*</span></label>
+          <input type="text" name="login_email" id="login_email"
+            value="${login_email}" />
+          <p class="error" py:if="error_email" py:content='error_email' />
+        </li>
+        <li id="item-login_pass" class="${'error' if error_password else None}">
+          <label class="desc" for="login_pass">Password
+            <span class="req">*</span></label>
+          <input type="password" name="login_pass" id="login_pass" />
+          <p class="error" py:if="error_password" py:content='error_password' />
+        </li>
+        <li class="buttons">
+          <button id="userformlogin" name="login" type="submit"
+            class="btnText submit" value="login">Login</button>
+        </li>
+      </ul>
+    </fieldset>
+  </form>
+
+  <p><a href="${url('user', action='send_recover_mail')}"
+    >Forgot your password?</a></p>
+</py:def>
+
+<xi:include href="master_cover.genshi" />
+</html>
