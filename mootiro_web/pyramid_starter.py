@@ -152,8 +152,8 @@ class PyramidStarter(object):
         best to avoid py:match.
         '''
         self.settings.setdefault('genshi.translation_domain', self.name)
-        from mootiro_web.pyramid_genshi import renderer_factory
-        self.config.add_renderer('.genshi', renderer_factory)
+        from mootiro_web.pyramid_genshi import enable_genshi
+        enable_genshi(self.config)
 
     def enable_deform(self, template_dirs):
         from .pyramid_deform import setup

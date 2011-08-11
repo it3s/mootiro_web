@@ -61,22 +61,12 @@ def to_list(sequence):
     else:
         return sequence
 
+
 class GenshiTemplateRenderer(object):
     implements(ITemplateRenderer)
 
-    def __init__(self, info):
-        ''' ``info`` contains:
-        name = Attribute('The value passed by the user as the renderer name')
-        package = Attribute('The "current package" when the renderer '
-                            'configuration statement was found')
-        type = Attribute('The renderer type name')
-        registry = Attribute('The "current" application registry when the '
-                             'renderer was created')
-        settings = Attribute('The ISettings dictionary related to the '
-                             'current app')
-        '''
+    def __init__(self, settings):
         from genshi.template import TemplateLoader
-        settings = info.settings
         try:
             dirs = settings['genshi.directories']
         except KeyError:
@@ -147,15 +137,22 @@ class GenshiTemplateRenderer(object):
             .render(method=self.method, encoding=None)
 
 
-def renderer_factory(info):
-    registry = info.registry
-    if hasattr(registry, 'genshi_renderer'):
-        return registry.genshi_renderer
-    else:
-        registry.genshi_renderer = GenshiTemplateRenderer(info)
-        return registry.genshi_renderer
 
 def enable_genshi(config, extension='.genshi'):
     '''Allows us to use the Genshi templating language in Pyramid.
     '''
+    def renderer_factory(info):
+        ''' ``info`` contains:
+        name = Attribute('The value passed by the user as the renderer name')
+        package = Attribute('The "current package" when the renderer '
+                            'configuration statement was found')
+        type = Attribute('The renderer type name')
+        registry = Attribute('The "current" application registry when the '
+                             'renderer was created')
+        settings = Attribute('The ISettings dictionary related to the '
+                             'current app')
+        '''
+        return info.settings['genshi_renderer']
+    settings = config.get_settings()
+    settings['genshi_renderer'] = GenshiTemplateRenderer(settings)
     config.add_renderer(extension, renderer_factory)
