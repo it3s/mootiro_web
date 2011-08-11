@@ -18,7 +18,7 @@ from ..pyramid_deform import make_form, get_button, d
 from .schemas import create_user_schema, create_edit_user_schema, \
      create_edit_user_schema_without_mail_validation, \
      SendMailSchema, PasswordSchema, UserLoginSchema, ValidationKeySchema
-#from mootiro_form.utils import create_locale_cookie
+from . import create_locale_cookie
 
 
 user_login_schema = UserLoginSchema()

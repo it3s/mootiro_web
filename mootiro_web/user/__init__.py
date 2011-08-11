@@ -76,3 +76,13 @@ def get_request_class(deps):
             return sas.query(User).get(userid) if userid else None
 
     return MootiroRequest
+
+
+def create_locale_cookie(locale, settings):
+    for loc in settings['enabled_locales']:
+        if loc['name'] == locale:
+            headers = [(b'Set-Cookie',
+                b'_LOCALE_={0}; expires=Fri, 31-Dec-9999 23:00:00 GMT; Path=/' \
+                .format(locale.encode('utf8')))]
+            return headers
+    raise KeyError('Locale not configured: "{}"'.format(locale))

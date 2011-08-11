@@ -68,8 +68,10 @@ class PyramidStarter(object):
         locales_filter = settings.get('enabled_locales', 'en').split(' ')
         # Check the settings against a list of supported locales
         supported_locales = [dict(name='en', title='Change to English'),
-                             dict(name='en_DEV', title='Change to dev slang'),
-                             dict(name='pt_BR', title='Mudar para português')]
+                         dict(name='en_DEV', title='Change to dev slang'),
+                         dict(name='pt_BR', title='Mudar para português'),
+                         dict(name='es', title='Cambiar a español'),
+                         dict(name='de', title='Zu Deutsch wechseln')]
         # The above list must be updated when new languages are added
         enabled_locales = []
         for locale in locales_filter:
