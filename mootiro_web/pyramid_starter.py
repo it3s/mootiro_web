@@ -71,7 +71,7 @@ class PyramidStarter(object):
                          dict(name='en_DEV', title='Change to dev slang'),
                          dict(name='pt_BR', title='Mudar para português'),
                          dict(name='es', title='Cambiar a español'),
-                         dict(name='de', title='Zu Deutsch wechseln')]
+                         dict(name='de', title='Auf Deutsch')]
         # The above list must be updated when new languages are added
         enabled_locales = []
         for locale in locales_filter:
@@ -133,6 +133,12 @@ class PyramidStarter(object):
         if initialize_sql:
             self.log('initialize_sql()')
             initialize_sql(engine, settings=self.settings)
+
+    def set_authenticator(self, instance):
+        '''Takes an instance of BaseAuthenticator
+        and stores it in settings as our 'authenticator'.
+        '''
+        self.settings['authenticator'] = instance
 
     def enable_turbomail(self):
         from turbomail.control import interface
