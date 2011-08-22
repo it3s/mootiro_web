@@ -134,12 +134,6 @@ class PyramidStarter(object):
             self.log('initialize_sql()')
             initialize_sql(engine, settings=self.settings)
 
-    def set_authenticator(self, instance):
-        '''Takes an instance of BaseAuthenticator
-        and stores it in settings as our 'authenticator'.
-        '''
-        self.settings['authenticator'] = instance
-
     def enable_turbomail(self):
         from turbomail.control import interface
         import atexit

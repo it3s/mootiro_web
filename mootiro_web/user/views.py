@@ -5,6 +5,7 @@
 from __future__ import unicode_literals  # unicode by default
 
 import colander as c
+from urllib import urlencode
 from turbomail import Message
 from pyramid_handlers import action
 from pyramid.httpexceptions import HTTPFound
@@ -85,22 +86,82 @@ MSG_LST = [  # This separates translation msgs from line breaks
     "\n",
     _("If you have any questions or feedback, please contact us on"),
     "{4}\n",
-    _("Your MootiroForm Team."),
+    _("Mootiro team."),
 ]
 
 
-class UserView(BaseView):
+class BaseAuthenticator(BaseView):
+    '''Abstract base view for authentication.'''
+    def set_auth_cookie_and_redirect(self, user_id, location=None,
+                                     headers=None):
+        '''Stores the user_id in a cookie, for subsequent requests.'''
+        settings = self.request.registry.settings
+        # TODO: Replace "enable_gallery_mode" in configs
+        if settings.get('disable_login') == 'true':  return
+        if not location:
+            location = self.url('root')
+        if not headers:
+            headers  = remember(request, user_id)
+        else:
+            headers += remember(request, user_id)
+        # May also set max_age above. (pyramid.authentication, line 272)
+        return HTTPFound(location=location, headers=headers)
+
+    def authenticate(self, user, password):
+        '''Must be implemented in subclasses. Possible return values:
+        - the user object if the credentials are ok
+        - None if the credentials are wrong
+        - HTTPFound if redirection is needed (e. g. CAS)
+        '''
+        raise NotImplementedError()
+
+
+class CasView(BaseAuthenticator):
+    '''An authentication view that delegates to a CAS server
+    (Central Authentication Service).
+    '''
+    @staticmethod
+    def add_routes(config, prefix='user/'):
+        handler = config.add_handler
+        handler('user', prefix + '{action}',
+                handler='mootiro_web.user.views:CasView')
+
+    @action(name='login', request_method='GET')
+    def login_form(self):
+        '''Redirects to the CAS login page if there is no logged user.'''
+        settings = self.request.registry.settings
+        if self.request.user:
+            return HTTPFound(location='/')
+        else:
+            service = self.url('user', action='verify')
+            # settings['scheme_domain_port'] +
+
+            return HTTPFound(location='http://' + settings['CAS.host'] + \
+                '/login?' + urlencode(dict(service=service)))
+        # TODO: Mark this setting as required in development.ini-dist
+
+    @action(request_method='POST')
+    def verify(self):
+        '''Called after the user is logged to the CAS server.'''
+
+
+class UserView(BaseAuthenticator):
     @staticmethod
     def add_routes(config, prefix='user/'):
         '''Configures URLs in this application.'''
         handler = config.add_handler
         config.add_static_view('user_static', 'mootiro_web.user:static')
-        handler('root', '',
-                handler='mootiro_web.user.views:UserView.login', action='root')
+        # handler('root', '',
+        #         handler='mootiro_web.user.views:UserView.login', action='root')
         handler('user', prefix + '{action}',
                 handler='mootiro_web.user.views:UserView')
         handler('reset_password', prefix + '{action}/{slug}',
                 handler='mootiro_web.user.views:UserView')
+        handler('email_validation', 'email_validation/{action}',
+                handler='mootiro_web.user.views:UserView')
+        handler('email_validator', 'email_validation/{action}/{key}',
+                handler='mootiro_web.user.views:UserView')
+
 
     EDIT_TITLE = _('My account')
     LOGIN_TITLE = _('Login')
@@ -211,21 +272,6 @@ class UserView(BaseView):
         settings = self.request.registry.settings
         return create_locale_cookie(locale, settings)
 
-    def _authenticate(self, user_id, ref=None, headers=None):
-        '''Stores the user_id in a cookie, for subsequent requests.'''
-        settings = self.request.registry.settings
-        # Code for disabling user functionality when in gallery mode
-        if settings.get('enable_gallery_mode', 'false') == 'true':
-            return
-        if not ref:
-            ref = self.url('root')
-        if not headers:
-            headers  = remember(self.request, user_id)
-        else:
-            headers += remember(self.request, user_id)
-        # May also set max_age above. (pyramid.authentication, line 272)
-        return HTTPFound(location=ref, headers=headers)
-
     @action(name='current', renderer='user_edit.genshi', request_method='GET')
     @authenticated
     def edit_user_form(self):
@@ -268,8 +314,8 @@ class UserView(BaseView):
         # And set the language cookie, so the user browses directly with the
         # selected language
         headers = self._set_locale_cookie()
-
-        return self._authenticate(user.id, headers=headers)
+        return self.set_auth_cookie_and_redirect \
+                    (user.id, self.url('root'), headers=headers)
 
     @action(name='edit_password', renderer='edit_password.genshi',
             request_method ='GET')
@@ -304,7 +350,7 @@ class UserView(BaseView):
     def login_form(self):
         '''Shows the login page if there is no logged user.'''
         if self.request.user:
-            return HTTPFound(location = '/')
+            return HTTPFound(location='/')
         else:
             return self._login_dict()
 
@@ -354,7 +400,8 @@ class UserView(BaseView):
                 headers = create_locale_cookie(locale, settings)
                 # The final destination URL may be passed in as a URL parameter
                 referrer = self.request.GET.get('ref', self.url('root'))
-                return self._authenticate(u.id, ref=referrer, headers=headers)
+                return self.set_auth_cookie_and_redirect \
+                    (u.id, referrer, headers=headers)
             else:
                 # User is awaiting email validation
                 return dict(email_sent=True)
@@ -476,9 +523,7 @@ class UserView(BaseView):
         user = self.request.user
         user.delete_user()
         logout_now(self.request)
-
         return dict(pagetitle=self.tr("Your profile was deleted"),)
-
 
     @action(name='validator', renderer='email_validation.genshi')
     def validator(self):
@@ -571,3 +616,10 @@ class UserView(BaseView):
             rdict['email_sent'] = True
 
         return rdict
+
+
+def enable_auth(settings, config):
+    if settings.get('CAS.enable') == 'true':
+        CasView.add_routes(config)
+    else:
+        UserView.add_routes(config)
