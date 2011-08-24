@@ -8,15 +8,7 @@ from sqlalchemy.types import Unicode, Integer
 from sqlalchemy.orm import relationship, backref
 from . import Base, id_column, now_column
 from .user import User
-
-# TODO: fix this import by creating respective module "mootiro_web/utils.py"
-# from mootiro_form.utils.text import random_word
-def random_word(length, chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ' \
-                              'abcdefghijklmnopqrstuvwxyz' \
-                              '0123456789'):
-    '''Returns a random string of some `length`.'''
-    return ''.join((random.choice(chars) for i in xrange(length)))
-
+from mootiro_web.text import random_word
 
 
 class EmailValidationKey (Base):
