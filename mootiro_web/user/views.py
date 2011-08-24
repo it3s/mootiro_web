@@ -650,6 +650,9 @@ class UserView(BaseAuthenticator):
 
 
 def enable_auth(settings, config):
+    # The User model requires a per-installation salt (a string)
+    # for creating user passwords hashes, so:
+    User.salt = settings.pop('auth.password.hash.salt')  # required config
     if settings.get('CAS.enable') == 'true':
         CasView.add_routes(config)
     else:
