@@ -119,7 +119,7 @@ class PyramidStarter(object):
     def enable_sqlalchemy(self, initialize_sql=None):
         from sqlalchemy import engine_from_config
         self.engine = engine = engine_from_config(self.settings, 'sqlalchemy.')
-        if not initialize_sql:
+        if initialize_sql is None:
             from importlib import import_module
             try:
                 module = import_module(self.name + '.models')

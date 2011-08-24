@@ -4,8 +4,12 @@
 
 from __future__ import unicode_literals  # unicode by default
 
+try:
+    from xml.etree import ElementTree
+except ImportError:
+    from elementtree import ElementTree
 import colander as c
-from urllib import urlencode
+from urllib import urlencode, urlopen
 from turbomail import Message
 from pyramid_handlers import action
 from pyramid.httpexceptions import HTTPFound
@@ -14,7 +18,8 @@ from pyramid.request import add_global_response_headers
 from pyramid.security import remember, forget
 from . import BaseView, _, authenticated
 from ..pyramid_deform import make_form, get_button, d
-#from mootiro_form.models import User, Form, FormCategory, SlugIdentification, \
+from .models.user import User, sas
+# , Form, FormCategory, SlugIdentification, \
 #     EmailValidationKey, sas
 from .schemas import create_user_schema, create_edit_user_schema, \
      create_edit_user_schema_without_mail_validation, \
@@ -101,19 +106,11 @@ class BaseAuthenticator(BaseView):
         if not location:
             location = self.url('root')
         if not headers:
-            headers  = remember(request, user_id)
+            headers  = remember(self.request, user_id)
         else:
-            headers += remember(request, user_id)
+            headers += remember(self.request, user_id)
         # May also set max_age above. (pyramid.authentication, line 272)
         return HTTPFound(location=location, headers=headers)
-
-    def authenticate(self, user, password):
-        '''Must be implemented in subclasses. Possible return values:
-        - the user object if the credentials are ok
-        - None if the credentials are wrong
-        - HTTPFound if redirection is needed (e. g. CAS)
-        '''
-        raise NotImplementedError()
 
 
 class CasView(BaseAuthenticator):
@@ -134,15 +131,49 @@ class CasView(BaseAuthenticator):
             return HTTPFound(location='/')
         else:
             service = self.url('user', action='verify')
-            # settings['scheme_domain_port'] +
-
             return HTTPFound(location='http://' + settings['CAS.host'] + \
                 '/login?' + urlencode(dict(service=service)))
-        # TODO: Mark this setting as required in development.ini-dist
 
-    @action(request_method='POST')
+    def _verify_cas2(self, ticket):
+        """Verifies a CAS 2.0+ XML-based authentication ticket
+        against the server.
+        Returns username on success and None on failure.
+        Code 'inspired' by http://code.google.com/p/django-cas/source/browse/django_cas/backends.py
+        """
+        params = {'ticket' : ticket,
+                  'service': 'http://localhost:6543/user/verify',
+                  # self.url('user', action='verify'),
+        }
+        page = urlopen('http://' + self.request.registry.settings['CAS.host'] \
+            + '/proxyValidate?' + urlencode(params))
+        try:
+            response = page.read()
+            tree = ElementTree.fromstring(response)
+            if tree[0].tag.endswith('authenticationSuccess'):
+                return tree[0][0].text
+            else:
+                return None
+        finally:
+            page.close()
+
+    @action(request_method='GET')
     def verify(self):
-        '''Called after the user is logged to the CAS server.'''
+        '''The CAS server redirects back to this view like this:
+        http://localhost:6543/user/verify?ticket=ST-2-sG2bwsfXA5dAR9fBoRKd-cas
+
+        Here we verify the passed ticket against the CAS server, then
+        '''
+        ticket = self.request.GET['ticket']  # the unicode ticket
+        username = self._verify_cas2(ticket)
+        if username:
+            user_id = self.get_user_id(username)
+            return self.set_auth_cookie_and_redirect(user_id)
+        else:
+            return self.login_form()
+
+    def get_user_id(self, username):
+        '''This might be overridden in subclasses.'''
+        return sas.query(User.id).filter(User.email == username).one()[0]
 
 
 class UserView(BaseAuthenticator):
@@ -198,8 +229,8 @@ class UserView(BaseAuthenticator):
         else redisplays the form with the error messages.
         '''
         settings = self.request.registry.settings
-        # Code for disabling user functionality when in gallery mode
-        if settings.get('enable_gallery_mode', 'false') == 'true':
+        # Disable user functionality when in gallery mode
+        if settings.get('disable_login') == 'true':
             return
 
         controls = self.request.params.items()
@@ -289,8 +320,8 @@ class UserView(BaseAuthenticator):
         else redisplays the form with the error messages.
         '''
         settings = self.request.registry.settings
-        # Code for disabling user functionality when in gallery mode
-        if settings.get('enable_gallery_mode', 'false') == 'true':
+        # Disable user functionality when in gallery mode
+        if settings.get('disable_login') == 'true':
             return
 
         controls = self.request.POST.items()
@@ -376,8 +407,8 @@ class UserView(BaseAuthenticator):
     def login(self):
         # Disable user functionality when in gallery mode
         settings = self.request.registry.settings
-        if settings.get('enable_gallery_mode', 'false') == 'true':
-            raise RuntimeError('No dice: gallery mode :p')
+        if settings.get('disable_login') == 'true':
+            raise RuntimeError('Login attempted, but in gallery mode :p')
 
         # Validate the email and password using only colander
         posted = {

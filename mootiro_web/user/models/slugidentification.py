@@ -21,7 +21,8 @@ class SlugIdentification(Base):
 
     user_id = Column(Integer, ForeignKey('user.id'))
     user = relationship(User, backref=backref('slug_identifications',
-                        order_by=id, cascade='all'))
+        order_by=id, cascade='all'),
+        primaryjoin="User.id==SlugIdentification.user_id")
 
     @classmethod
     def create_unique_slug(cls, user):
