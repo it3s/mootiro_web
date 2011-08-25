@@ -175,6 +175,18 @@ class CasView(BaseAuthenticator):
         '''This might be overridden in subclasses.'''
         return sas.query(User.id).filter(User.email == username).one()[0]
 
+    @action(request_method='POST')
+    def logout(self):
+        '''Creates HTTP headers that cause the authentication cookie to be
+        deleted and redirects to the CAS logout page.
+        '''
+        settings = self.request.registry.settings
+        my_url = settings.get('scheme_domain_port') or \
+            'http://' + self.request.environ.get('HTTP_HOST') + '/'
+        return HTTPFound(headers=forget(self.request),
+            location='http://' + self.request.registry.settings['CAS.host'] + \
+            '/logout?' + urlencode(dict(url=my_url)))
+
 
 class UserView(BaseAuthenticator):
     @staticmethod
