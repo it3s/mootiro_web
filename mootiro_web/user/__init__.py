@@ -55,11 +55,15 @@ def authenticated(func):
     return wrapper
 
 
-def get_request_class(deps):
+def get_request_class(deps, UserClass=None, sas=None):
     from pyramid.request import Request
     from pyramid.security import authenticated_userid
-    from .models.user import User, sas
     from ..page_deps import PageDeps
+
+    if not UserClass:
+        from .models.user import User
+    if not sas:
+        from .models.user import sas
 
     class MootiroRequest(Request):
         def __init__(self, *a, **kw):
