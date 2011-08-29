@@ -33,19 +33,6 @@ password_schema = PasswordSchema()
 validation_key_schema = ValidationKeySchema()
 
 
-def edit_user_form(button=_('Submit'), mail_validation=True):
-    '''Apparently, Deform forms must be instantiated for every request.'''
-    if mail_validation == False:
-        edit_user_schema = create_edit_user_schema_without_mail_validation \
-                                (self.request.registry.settings)
-    else:
-        edit_user_schema = \
-            create_edit_user_schema(self.request.registry.settings)
-    return make_form(edit_user_schema, f_template='edit_profile',
-                     buttons=(get_button(button),),
-                     formid='edituserform')
-
-
 def send_mail_form(button=_('Send'), action=""):
     return d.Form(send_mail_schema, buttons=(get_button(button),),
                   action=action, formid='sendmailform')
@@ -315,13 +302,25 @@ class UserView(BaseAuthenticator):
         settings = self.request.registry.settings
         return create_locale_cookie(locale, settings)
 
+    def _edit_user_form(self, button=_('Submit'), mail_validation=True):
+        '''Apparently, Deform forms must be instantiated for every request.'''
+        if mail_validation == False:
+            edit_user_schema = create_edit_user_schema_without_mail_validation \
+                                    (self.request.registry.settings)
+        else:
+            edit_user_schema = \
+                create_edit_user_schema(self.request.registry.settings)
+        return make_form(edit_user_schema, f_template='edit_profile',
+                         buttons=(get_button(button),),
+                         formid='edituserform')
+
     @action(name='current', renderer='user_edit.genshi', request_method='GET')
     @authenticated
     def edit_user_form(self):
         '''Displays the form to edit the current user profile.'''
         user = self.request.user
         return dict(pagetitle=self.tr(self.EDIT_TITLE),
-                user_form=edit_user_form() \
+                user_form=self._edit_user_form() \
                     .render(self.model_to_dict(user, ('nickname', 'real_name', \
                     'email', 'default_locale'))))
 
@@ -340,9 +339,9 @@ class UserView(BaseAuthenticator):
         # If User does not change email, do not validate this field
         email = self.request.user.email
         if email == self.request.POST['email']:
-            uf = edit_user_form(mail_validation=False)
+            uf = self._edit_user_form(mail_validation=False)
         else:
-            uf = edit_user_form()
+            uf = self._edit_user_form()
         # Validate the instantiated form against the controls
         try:
             appstruct = uf.validate(controls)
@@ -669,3 +668,11 @@ def enable_auth(settings, config):
         CasView.add_routes(config)
     else:
         UserView.add_routes(config)
+        if settings.get('genshi_renderer'):
+            raise RuntimeError('Call enable_genshi() after enable_auth().')
+        # Add our templates directory to the Genshi search path
+        dirs = settings.get('genshi.directories', [])
+        if isinstance(dirs, basestring):
+            dirs = [dirs]
+        dirs.append('mootiro_web:user/templates')
+        settings['genshi.directories'] = dirs
