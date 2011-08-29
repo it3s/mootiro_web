@@ -22,6 +22,11 @@ def makedirs(s):
         os.makedirs(s)
 
 
+class LocaleList(list):
+    def add(self, id, name, title):
+        self.append(dict(name=id, descr=name, title=title))
+
+
 class PyramidStarter(object):
     '''Reusable configurator for nice Pyramid applications.'''
 
@@ -66,16 +71,18 @@ class PyramidStarter(object):
         # Get a list of enabled locale names from settings
         settings = self.settings
         locales_filter = settings.get('enabled_locales', 'en').split(' ')
+        _ = self._
         # Check the settings against a list of supported locales
-        supported_locales = [dict(name='en', title='Change to English'),
-                         dict(name='en_DEV', title='Change to dev slang'),
-                         dict(name='pt_BR', title='Mudar para português'),
-                         dict(name='es', title='Cambiar a español'),
-                         dict(name='de', title='Auf Deutsch')]
+        locales = LocaleList()
+        locales.add('en', _('English'), 'Change to English')
+        locales.add('en_DEV', _('English-DEV'), 'Change to dev slang')
+        locales.add('pt_BR', _('Brazilian Portuguese'), 'Mudar para português')
+        locales.add('es', _('Spanish'), 'Cambiar a español')
+        locales.add('de', _('German'), 'Auf Deutsch')
         # The above list must be updated when new languages are added
         enabled_locales = []
         for locale in locales_filter:
-            for adict in supported_locales:
+            for adict in locales:
                 if locale == adict['name']:
                     enabled_locales.append(adict)
         # Replace the setting

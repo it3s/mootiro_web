@@ -93,12 +93,13 @@ def password():
                             .CheckedPasswordWidget(category='structural'))
 
 
-def language_dropdown(settings):
+def language_dropdown(settings, translator):
+    options = [('choose', _('--Choose--')),] + \
+        [(e['name'], e['descr']) for e in settings['enabled_locales']]
+    options = sorted(options, key=lambda e: translator(e[1]))
     return c.SchemaNode(c.Str(), title=_('Language'), name='default_locale',
                         validator=locale_exists(settings),
-                        widget=d.widget.SelectWidget(values=( \
-                            ('choose', _('--Choose--')), ('en', _('English')), \
-                            ('pt_BR', _('Portuguese')))))
+                        widget=d.widget.SelectWidget(values=options))
 
 
 # Schemas
@@ -124,11 +125,11 @@ def create_user_schema(add_terms, settings):
     return user_schema
 
 
-def create_edit_user_schema(settings):
+def create_edit_user_schema(settings, translator):
     return c.SchemaNode(c.Mapping(),
         real_name(),
         email_is_unique(),            # email
-        language_dropdown(settings),  # default_locale
+        language_dropdown(settings, translator),  # default_locale
     )
 
 def create_edit_user_schema_without_mail_validation(settings):

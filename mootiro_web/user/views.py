@@ -308,8 +308,8 @@ class UserView(BaseAuthenticator):
             edit_user_schema = create_edit_user_schema_without_mail_validation \
                                     (self.request.registry.settings)
         else:
-            edit_user_schema = \
-                create_edit_user_schema(self.request.registry.settings)
+            edit_user_schema = create_edit_user_schema \
+                (self.request.registry.settings, self.tr)
         return make_form(edit_user_schema, f_template='edit_profile',
                          buttons=(get_button(button),),
                          formid='edituserform')
