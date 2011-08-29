@@ -304,12 +304,12 @@ class UserView(BaseAuthenticator):
 
     def _edit_user_form(self, button=_('Submit'), mail_validation=True):
         '''Apparently, Deform forms must be instantiated for every request.'''
-        if mail_validation == False:
-            edit_user_schema = create_edit_user_schema_without_mail_validation \
-                                    (self.request.registry.settings)
-        else:
+        if mail_validation:
             edit_user_schema = create_edit_user_schema \
                 (self.request.registry.settings, self.tr)
+        else:
+            edit_user_schema = create_edit_user_schema_without_mail_validation \
+                                    (self.request.registry.settings, self.tr)
         return make_form(edit_user_schema, f_template='edit_profile',
                          buttons=(get_button(button),),
                          formid='edituserform')

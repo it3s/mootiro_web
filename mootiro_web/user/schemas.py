@@ -105,7 +105,7 @@ def language_dropdown(settings, translator):
 # Schemas
 # =======
 
-def create_user_schema(add_terms, settings):
+def create_user_schema(add_terms, settings, translator):
     nickname = c.SchemaNode(c.Str(), title=_('Nickname'), name='nickname',
         description=_("A short name for you, without spaces. " \
                       "This cannot be changed later!"), size=20,
@@ -113,7 +113,7 @@ def create_user_schema(add_terms, settings):
         widget=d.widget.TextInputWidget(template='textinput_descr'))
     reel_name = real_name()
     email = email_is_unique()
-    default_locale = language_dropdown(settings)
+    default_locale = language_dropdown(settings, translator)
     terms_of_service = c.SchemaNode(c.Bool(), title=_('Terms of Service'),
         validator=is_checked, name='terms_of_service',
         widget=d.widget.CheckboxWidget(template='checkbox_terms'))
@@ -132,15 +132,15 @@ def create_edit_user_schema(settings, translator):
         language_dropdown(settings, translator),  # default_locale
     )
 
-def create_edit_user_schema_without_mail_validation(settings):
+def create_edit_user_schema_without_mail_validation(settings, translator):
     return c.SchemaNode(c.Mapping(),
         real_name(),
-        c.SchemaNode(c.Str(), title=_('Email'),
+        c.SchemaNode(c.Str(), name='email', title=_('Email'),
               validator=c.Email(),
               description=_("Enter a valid email address."),
               widget=d.widget.TextInputWidget(template='textinput_descr'),
         ),
-        language_dropdown(settings),  # default_locale
+        language_dropdown(settings, translator),
     )
 
 
