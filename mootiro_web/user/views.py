@@ -148,19 +148,20 @@ class CasView(BaseAuthenticator):
         '''The CAS server redirects back to this view like this:
         http://localhost:6543/user/verify?ticket=ST-2-sG2bwsfXA5dAR9fBoRKd-cas
 
-        Here we verify the passed ticket against the CAS server, then
+        Here we verify the passed ticket against the CAS server.
+        If the CAS server gives us a user name, we ensure the user exists
+        in our database.
         '''
         ticket = self.request.GET['ticket']  # the unicode ticket
-        username = self._verify_cas2(ticket)
-        if username:
-            user_id = self.get_user_id(username)
-            return self.set_auth_cookie_and_redirect(user_id)
-        else:
+        email = self._verify_cas2(ticket)
+        if not email:
             return self.login_form()
-
-    def get_user_id(self, username):
-        '''This might be overridden in subclasses.'''
-        return sas.query(User.id).filter(User.email == username).one()[0]
+        user = sas.query(User).filter(User.email == email).first()
+        if not user:
+            user = User(email=email)
+            sas.add(user)
+            sas.flush()
+        return self.set_auth_cookie_and_redirect(user.id)
 
     @action(request_method='POST')
     def logout(self):
@@ -562,8 +563,8 @@ class UserView(BaseAuthenticator):
         ''' This view deletes the user and all data associated with her.
         Plus, it weeps a tear for the loss of the user.
         '''
-        user = self.request.user
-        user.delete_user()
+        sas.delete(self.request.user)
+        sas.flush()
         logout_now(self.request)
         return dict(pagetitle=self.tr("Your profile was deleted"),)
 
@@ -658,21 +659,3 @@ class UserView(BaseAuthenticator):
             rdict['email_sent'] = True
 
         return rdict
-
-
-def enable_auth(settings, config):
-    # The User model requires a per-installation salt (a string)
-    # for creating user passwords hashes, so:
-    User.salt = settings.pop('auth.password.hash.salt')  # required config
-    if settings.get('CAS.enable') == 'true':
-        CasView.add_routes(config)
-    else:
-        UserView.add_routes(config)
-        if settings.get('genshi_renderer'):
-            raise RuntimeError('Call enable_genshi() after enable_auth().')
-        # Add our templates directory to the Genshi search path
-        dirs = settings.get('genshi.directories', [])
-        if isinstance(dirs, basestring):
-            dirs = [dirs]
-        dirs.append('mootiro_web:user/templates')
-        settings['genshi.directories'] = dirs

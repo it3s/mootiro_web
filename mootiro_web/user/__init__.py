@@ -55,15 +55,25 @@ def authenticated(func):
     return wrapper
 
 
-def get_request_class(deps, UserClass=None, sas=None):
-    if not UserClass:
-        from .models.user import User
-    if not sas:
-        from .models.user import sas
+def get_request_class(deps, settings):
+    '''Sets which user model shall be used according to configuration,
+    sets the user salt if necessary (also according to configuration),
+    and returns a nice Request class which uses PageDeps and memoizes the
+    user object.
+    '''
+    from .models import user as user_module
+    if settings.get('CAS.enable') == 'true':
+        user_module.User = User = user_module.make_user_class(full=False)
+    else:
+        user_module.User = User = user_module.make_user_class(full=True)
+        # The User model requires a per-installation salt (a string)
+        # for creating user passwords hashes, so:
+        User.salt = settings.pop('auth.password.hash.salt')  # required config
 
     from pyramid.request import Request
     from pyramid.security import authenticated_userid
     from ..page_deps import PageDeps
+    from .models.user import sas
 
     class MootiroRequest(Request):
         def __init__(self, *a, **kw):
@@ -90,3 +100,20 @@ def create_locale_cookie(locale, settings):
                 .format(locale.encode('utf8')))]
             return headers
     raise KeyError('Locale not configured: "{}"'.format(locale))
+
+
+def enable_auth(settings, config):
+    if settings.get('CAS.enable') == 'true':
+        from .views import CasView
+        CasView.add_routes(config)
+    else:
+        from .views import UserView
+        UserView.add_routes(config)
+        if settings.get('genshi_renderer'):
+            raise RuntimeError('Call enable_genshi() after enable_auth().')
+        # Add our templates directory to the Genshi search path
+        dirs = settings.get('genshi.directories', [])
+        if isinstance(dirs, basestring):
+            dirs = [dirs]
+        dirs.append('mootiro_web:user/templates')
+        settings['genshi.directories'] = dirs

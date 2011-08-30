@@ -55,9 +55,8 @@ def is_checked(node, value):
 # Minimum and maximum lengths
 # ===========================
 
-LEN_REAL_NAME = dict(min=5, max=length(User.real_name))
-LEN_PASSWORD = dict(min=8, max=User.LEN_PASSWORD)
-LEN_NICKNAME = dict(min=1, max=length(User.nickname))
+def len_password():
+    return dict(min=8, max=User.LEN_PASSWORD)
 
 
 # Fields used more than once
@@ -66,7 +65,7 @@ LEN_NICKNAME = dict(min=1, max=length(User.nickname))
 def real_name():
     return c.SchemaNode(c.Str(), title=_('Full name'), name='real_name',
             description=_('At least five characters.'),
-            validator=c.Length(**LEN_REAL_NAME),
+            validator=c.Length(min=5, max=length(User.real_name)),
             widget=d.widget.TextInputWidget(template='textinput_descr'))
 
 
@@ -86,7 +85,7 @@ def password():
     return c.SchemaNode(c.Str(), title=_('Password'), name='password',
                         description=_('Minimum 8 characters. Please mix ' \
                                       'letters and numbers'),
-                        validator=c.Length(**LEN_PASSWORD),
+                        validator=c.Length(**len_password()),
                         widget=d.widget
                             #assign category as structural to make the
                             #description label of a field disappear.
@@ -109,7 +108,8 @@ def create_user_schema(add_terms, settings, translator):
     nickname = c.SchemaNode(c.Str(), title=_('Nickname'), name='nickname',
         description=_("A short name for you, without spaces. " \
                       "This cannot be changed later!"), size=20,
-        validator=c.All(c.Length(**LEN_NICKNAME), unique_nickname),
+        validator=c.All(c.Length(min=1, max=length(User.nickname)),
+                        unique_nickname),
         widget=d.widget.TextInputWidget(template='textinput_descr'))
     reel_name = real_name()
     email = email_is_unique()
@@ -161,7 +161,7 @@ class UserLoginSchema(c.MappingSchema):
     login_email = c.SchemaNode(c.Str(), title=_('Email'),
                                validator=c.Email())
     login_pass = c.SchemaNode(c.Str(), title=_('Password'),
-        validator=c.Length(**LEN_PASSWORD),
+        validator=c.Length(**len_password()),
         widget=d.widget.PasswordWidget())
 
 

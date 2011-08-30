@@ -45,13 +45,13 @@ class PyramidStarter(object):
         `packages` is a sequence of additional packages that should be
         scanned/enabled.
         '''
-        if not settings.has_key('app.name'):
-            raise KeyError \
-                ('Your configuration files are missing an "app.name".')
-        self.name = name
-        self.packages = packages
         if require_python27:
             self.require_python27()
+        if not settings.has_key('app.name'):
+            raise KeyError \
+                ('Your configuration files are missing an "app.name" setting.')
+        self.name = name
+        self.packages = packages
         if isinstance(config, Configurator):
             self.config = config
         else:
@@ -64,6 +64,7 @@ class PyramidStarter(object):
         from pyramid.i18n import TranslationStringFactory
         self._ = TranslationStringFactory(name)
         self._enable_locales()
+        self.handlers = False  # which can be changed by enable_handlers()
 
     def _enable_locales(self):
         '''Gets a list of enabled locale names from settings, checks it
@@ -121,10 +122,7 @@ class PyramidStarter(object):
         '''
         from pyramid_handlers import includeme
         self.config.include(includeme)
-        if scan:
-            self.config.scan(self.name)
-            for p in self.packages:
-                self.config.scan(p)
+        self.handlers = True
 
     def enable_sqlalchemy(self, initialize_sql=None):
         from sqlalchemy import engine_from_config
@@ -224,6 +222,10 @@ class PyramidStarter(object):
         '''Commits the configuration (this causes some tests) and returns the
         WSGI application.
         '''
+        if self.handlers:
+            self.config.scan(self.name)
+            for p in self.packages:
+                self.config.scan(p)
         return self.config.make_wsgi_app()
 
     @property
