@@ -10,7 +10,7 @@ request.page_deps.lib('jquery')
   <py:def function="content()">
     <div class='readable'>
       <p><strong py:content='pagetitle' /></p>
-      <p>Thank you for your interest in MootiroForm!</p>
+      <p>Thank you for your interest in Mootiro!</p>
       <p>We hope you enjoyed using our tool!</p>
     </div>
   </py:def>

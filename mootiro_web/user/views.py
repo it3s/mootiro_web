@@ -501,9 +501,11 @@ class UserView(BaseAuthenticator):
         slug = si.user_slug
         password_link = self.url('reset_password', action='recover', slug=slug)
 
-        sender = self.request.registry.settings.get('mail.message.author','sender@example.org')
+        settings = self.request.registry.settings
+        sender = settings.get('mail.message.author','sender@example.org')
+        appname = settings.get('app.name', 'Mootiro')
         recipient = email
-        subject = _("MootiroForm - Change Password")
+        subject = appname + ' - ' + _("Change password")
         message = _("To set a new password please click on the link: ")
 
         msg = Message(sender, recipient, self.tr(subject))
