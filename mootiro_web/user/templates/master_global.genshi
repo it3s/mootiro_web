@@ -7,7 +7,7 @@
   to absolutely all pages. -->
 
 <?python
-from mootiro_form import __appname__ as appname
+appname = request.registry.settings['app.name']
 # request.page_deps.lib('global')
 # request.page_deps.stylesheet('master_global')
 # request.page_deps.lib('js_url')

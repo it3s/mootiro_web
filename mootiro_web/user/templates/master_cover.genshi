@@ -7,7 +7,6 @@
 from pyramid.i18n import get_locale_name
 locale_name = get_locale_name(request)
 
-
 pd = request.page_deps
 pd.onload('''
   $(document).ready(function(){

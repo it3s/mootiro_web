@@ -3,9 +3,11 @@
       xmlns:xi="http://www.w3.org/2001/XInclude"
       py:strip=''>
 <?python
-    request.page_deps.package('deform')
-    request.page_deps.package('jquery.ui')
+appname = request.registry.settings['app.name']
+request.page_deps.package('deform')
+request.page_deps.package('jquery.ui')
 ?>
+
   <py:def function="logged_head()">
     <style type="text/css">
        #changePassword .description {
@@ -17,7 +19,7 @@
   </py:def>
   <py:def function="content()">
     <h1 py:content='pagetitle' />
-    <p py:if="not request.user">Welcome to Mootiro!<br />
+    <p py:if="not request.user">Welcome to $appname!<br />
       Fill in the fields below to sign up.
     </p>
     ${Markup(user_form)}

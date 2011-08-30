@@ -3,7 +3,6 @@
       xmlns:xi="http://www.w3.org/2001/XInclude"
       py:strip=''>
 <?python
-from mootiro_form import __appname__ as appname
 request.page_deps.package('deform')
 ?>
 

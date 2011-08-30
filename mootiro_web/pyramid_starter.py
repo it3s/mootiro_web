@@ -45,6 +45,9 @@ class PyramidStarter(object):
         `packages` is a sequence of additional packages that should be
         scanned/enabled.
         '''
+        if not settings.has_key('app.name'):
+            raise KeyError \
+                ('Your configuration files are missing an "app.name".')
         self.name = name
         self.packages = packages
         if require_python27:
