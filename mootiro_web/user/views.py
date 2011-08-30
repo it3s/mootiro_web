@@ -65,23 +65,6 @@ def logout_now(request):
     request.user = None
 
 
-MSG_LST = [  # This separates translation msgs from line breaks
-    _("Hello, {0}, welcome to MootiroForm!"),
-    "\n",
-    _("To get started using our tool, you have to activate your account:"),
-    "\n",
-    _("Visit this link,"),
-    "{1}",
-    "\n",
-    _("or use this key: {2}"),
-    _("on {3}."),
-    "\n",
-    _("If you have any questions or feedback, please contact us on"),
-    "{4}\n",
-    _("Mootiro team."),
-]
-
-
 class BaseAuthenticator(BaseView):
     '''Abstract base view for authentication.'''
     def set_auth_cookie_and_redirect(self, user_id, location=None,
@@ -283,17 +266,36 @@ class UserView(BaseAuthenticator):
         return dict(email_sent=True)
 
     def _send_email_validation(self, user, evk):
-        sender = self.request.registry.settings.get('mail.message.author','sender@example.org')
+        MSG_LST = [  # This separates translation msgs from line breaks
+            _("Hello, {0}, welcome to {1}!"),
+            "\n",
+            _("To get started using our tool, you have to activate your account:"),
+            "\n",
+            _("Visit this link,"),
+            "{2}",
+            "\n",
+            _("or use this key: {3}"),
+            _("on {4}."),
+            "\n",
+            _("If you have any questions or feedback, please contact us on"),
+            "{5}\n",
+            _("Mootiro team."),
+        ]
+        settings = self.request.registry.settings
+        appname = settings.get('app.name', 'Mootiro')
+        sender = settings.get('mail.message.author', 'sender@example.org')
         recipient = user.email
-        subject = _("MootiroForm - Email Validation")
+        subject = appname + ' - ' + _("Email Validation")
         link = self.url('email_validator', action="validator", key=evk.key)
-
-        message = '\n'.join([self.tr(m) for m in MSG_LST]) \
-                .format(user.nickname, link, evk.key,
-                    self.url('email_validation', action="validate_key"),
-                    self.url('contact'))
+        message = '\n'.join([self.tr(m) for m in MSG_LST]).format( \
+            user.nickname,
+            appname,
+            link,
+            evk.key,
+            self.url('email_validation', action="validate_key"),
+            self.url('contact'),
+        )
         msg = Message(sender, recipient, self.tr(subject))
-        #msg = Message(recipient, self.tr(subject))
         msg.plain = message
         msg.send()
 
