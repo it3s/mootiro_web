@@ -8,6 +8,8 @@ from pyramid.decorator import reify
 from pyramid.url import route_url
 from pyramid.i18n import get_localizer, TranslationStringFactory
 
+from pyramid.httpexceptions import HTTPFound
+
 _ = TranslationStringFactory('mootiro_web')
 del TranslationStringFactory
 
