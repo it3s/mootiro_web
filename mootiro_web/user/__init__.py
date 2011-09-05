@@ -108,6 +108,9 @@ def enable_auth(settings, config):
     if settings.get('CAS.enable') == 'true':
         from .views import CasView
         CasView.add_routes(config)
+        # Raise KeyError if configuration is missing:
+        settings['CAS.host']
+        settings['CAS.profile.host']
     else:
         from .views import UserView
         UserView.add_routes(config)

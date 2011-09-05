@@ -155,8 +155,19 @@ class CasView(BaseAuthenticator):
         my_url = settings.get('scheme_domain_port') or \
             'http://' + self.request.environ.get('HTTP_HOST') + '/'
         return HTTPFound(headers=forget(self.request),
-            location='http://' + self.request.registry.settings['CAS.host'] + \
+            location='http://' + settings['CAS.host'] + \
             '/logout?' + urlencode(dict(url=my_url)))
+
+    @action(name='current', request_method='GET')
+    @authenticated
+    def redirect_edit_profile(self):
+        '''Displays the form to edit the current user profile.'''
+        settings = self.request.registry.settings
+        my_url = settings.get('scheme_domain_port') or \
+            'http://' + self.request.environ.get('HTTP_HOST') + '/'
+        return HTTPFound(location='http://' + \
+            settings['CAS.profile.host'] + \
+            '/user/edit?' + urlencode(dict(app=my_url)))
 
 
 class UserView(BaseAuthenticator):
