@@ -156,7 +156,7 @@ class CasView(BaseAuthenticator):
             'http://' + self.request.environ.get('HTTP_HOST') + '/'
         return HTTPFound(headers=forget(self.request),
             location='http://' + settings['CAS.host'] + \
-            '/logout?' + urlencode(dict(url=my_url)))
+            '/logout?' + urlencode(dict(service=my_url)))
 
     @action(name='current', request_method='GET')
     @authenticated
