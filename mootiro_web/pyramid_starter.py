@@ -82,7 +82,7 @@ class PyramidStarter(object):
         locales.add('en_DEV', _('English-DEV'), 'Change to dev slang')
         locales.add('pt_BR', _('Brazilian Portuguese'), 'Mudar para português')
         locales.add('es', _('Spanish'), 'Cambiar a español')
-        locales.add('de', _('German'), 'Auf Deutsch')
+        locales.add('de', _('German'), 'Auf Deutsch benutzen')
         # The above list must be updated when new languages are added
         enabled_locales = []
         for locale in locales_filter:
