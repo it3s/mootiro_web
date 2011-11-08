@@ -101,7 +101,7 @@ class CasView(BaseAuthenticator):
             return HTTPFound(location='/')
         else:
             service = self.url('user', action='verify')
-            return HTTPFound(location='http://' + settings['CAS.host'] + \
+            return HTTPFound(settings['CAS.url'] + \
                 '/login?' + urlencode(dict(service=service)))
 
     def _verify_cas2(self, ticket):
@@ -111,10 +111,10 @@ class CasView(BaseAuthenticator):
         Code 'inspired' by http://code.google.com/p/django-cas/source/browse/django_cas/backends.py
         """
         params = {'ticket' : ticket,
-                  'service': 'http://localhost:6543/user/verify',
-                  # self.url('user', action='verify'),
+                  # 'service': self.request.registry.settings['scheme_domain_port'] + '/user/verify',
+                  'service': self.url('user', action='verify'),
         }
-        page = urlopen('http://' + self.request.registry.settings['CAS.host'] \
+        page = urlopen(self.request.registry.settings['CAS.url'] \
             + '/proxyValidate?' + urlencode(params))
         try:
             response = page.read()
@@ -155,7 +155,7 @@ class CasView(BaseAuthenticator):
         my_url = settings.get('scheme_domain_port') or \
             'http://' + self.request.environ.get('HTTP_HOST') + '/'
         return HTTPFound(headers=forget(self.request),
-            location='http://' + settings['CAS.host'] + \
+            location=settings['CAS.url'] + \
             '/logout?' + urlencode(dict(service=my_url)))
 
     @action(name='current', request_method='GET')
@@ -165,8 +165,7 @@ class CasView(BaseAuthenticator):
         settings = self.request.registry.settings
         my_url = settings.get('scheme_domain_port') or \
             'http://' + self.request.environ.get('HTTP_HOST') + '/'
-        return HTTPFound(location='http://' + \
-            settings['CAS.profile.host'] + \
+        return HTTPFound(location=settings['CAS.profile.url'] + \
             '/user/edit?' + urlencode(dict(app=my_url)))
 
 
