@@ -141,10 +141,21 @@ class CasView(BaseAuthenticator):
             return self.login_form()
         user = sas.query(User).filter(User.email == email).first()
         if not user:
-            user = User(email=email)
+            # Query for nickname
+            user = User(email=email,
+                        nickname=self._get_nickname_from_profile_server(email))
             sas.add(user)
             sas.flush()
         return self.set_auth_cookie_and_redirect(user.id)
+
+    def _get_nickname_from_profile_server(self, email):
+        from sqlalchemy import create_engine
+        engine = create_engine(
+            self.request.registry.settings['CAS.profile.dburi'], echo=False)
+        conn = engine.connect()
+        ins = "SELECT nickname FROM \"user\" WHERE email = '{}'".format(email)
+        result = conn.execute(ins)
+        return result.scalar()
 
     @action(request_method='POST')
     def logout(self):

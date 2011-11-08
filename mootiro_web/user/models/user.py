@@ -30,6 +30,7 @@ def make_user_class(full=True):
         id = id_column(__tablename__)
         created = now_column()  # when was this user created
         changed = now_column()  # when did the user last update their data
+        nickname = Column(Unicode(32), nullable=False, unique=True)
         email = Column(Unicode(255), nullable=False, unique=True)
         default_locale = Column(Unicode(5), default='en')
 
@@ -69,7 +70,6 @@ def make_user_class(full=True):
         LEN_PASSWORD = 32
 
         if full:
-            nickname = Column(Unicode(32), nullable=False, unique=True)
             real_name = Column(Unicode(255))
             is_email_validated = Column(Boolean, default=False)
             newsletter = Column(Boolean, default=False)  # receive news?
