@@ -169,7 +169,7 @@ class CasView(BaseAuthenticator):
             location=settings['CAS.url'] + \
             '/logout?' + urlencode(dict(service=my_url)))
 
-    @action(name='current', request_method='GET')
+    @action(name='edit', request_method='GET')
     @authenticated
     def redirect_edit_profile(self):
         '''Displays the form to edit the current user profile.'''
@@ -338,7 +338,7 @@ class UserView(BaseAuthenticator):
                          buttons=(get_button(button),),
                          formid='edituserform')
 
-    @action(name='current', renderer='user_edit.genshi', request_method='GET')
+    @action(name='edit', renderer='user_edit.genshi', request_method='GET')
     @authenticated
     def edit_user_form(self):
         '''Displays the form to edit the current user profile.'''
@@ -348,7 +348,7 @@ class UserView(BaseAuthenticator):
                     .render(self.model_to_dict(user, ('nickname', 'real_name', \
                     'email', 'default_locale'))))
 
-    @action(name='current', renderer='user_edit.genshi', request_method='POST')
+    @action(name='edit', renderer='user_edit.genshi', request_method='POST')
     @authenticated
     def update_user(self):
         '''Saves the user profile from POSTed data if it validates;
