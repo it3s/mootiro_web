@@ -102,7 +102,8 @@ class CasView(BaseAuthenticator):
         else:
             service = self.url('user', action='verify')
             return HTTPFound(settings['CAS.url'] + \
-                '/login?' + urlencode(dict(service=service)))
+                '/login?' + urlencode(dict(service=service,
+                    locale=get_locale_name(self.request))))
 
     def _verify_cas2(self, ticket):
         """Verifies a CAS 2.0+ XML-based authentication ticket
