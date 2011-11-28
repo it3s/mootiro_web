@@ -245,3 +245,15 @@ def all_routes(config):
     '''Returns a list of the routes configured in this application.'''
     return [(x.name, x.pattern) for x in \
             config.get_routes_mapper().get_routes()]
+
+
+def authentication_policy(settings, include_ip=True, timeout=60*60*32,
+                    reissue_time=60, find_groups=lambda userid, request: []):
+    '''Returns an authentication policy object for configuration.'''
+    try:
+        secret = settings['cookie_salt']
+    except KeyError as e:
+        raise KeyError('Your config file is missing a cookie_salt.')
+    from pyramid.authentication import AuthTktAuthenticationPolicy
+    return AuthTktAuthenticationPolicy(secret, callback=find_groups,
+        include_ip=include_ip, timeout=timeout, reissue_time=reissue_time)
