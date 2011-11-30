@@ -5,10 +5,10 @@
 
 from __future__ import unicode_literals  # unicode by default
 from pyramid.decorator import reify
-from pyramid.url import route_url
-from pyramid.i18n import get_localizer, TranslationStringFactory
-
 from pyramid.httpexceptions import HTTPFound
+from pyramid.i18n import get_localizer, TranslationStringFactory
+from pyramid.renderers import get_renderer
+from pyramid.url import route_url
 
 _ = TranslationStringFactory('mootiro_web')
 del TranslationStringFactory
@@ -41,6 +41,21 @@ class BaseView(object):
         for key, val in adict.items():
             setattr(model, key, val)
         return model
+
+
+class ChameleonBaseView(BaseView):
+    '''Base view for projects that use Chameleon with macros.'''
+    macro_cache = {}
+
+    @classmethod
+    def macro(cls, template, macro_name):
+        '''Loads macros from any template and memoizes them.'''
+        macro_path = template + '|' + macro_name
+        macro = cls.macro_cache.get(macro_path)
+        if not macro:
+            cls.macro_cache[macro_path] = macro = \
+                get_renderer(template).implementation().macros[macro_name]
+        return macro
 
 
 def authenticated(func):
