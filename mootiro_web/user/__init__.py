@@ -8,6 +8,7 @@ from pyramid.decorator import reify
 from pyramid.httpexceptions import HTTPFound
 from pyramid.i18n import get_localizer, TranslationStringFactory
 from pyramid.renderers import get_renderer
+from pyramid.settings import asbool
 from pyramid.url import route_url
 
 _ = TranslationStringFactory('mootiro_web')
@@ -45,17 +46,21 @@ class BaseView(object):
 
 class ChameleonBaseView(BaseView):
     '''Base view for projects that use Chameleon with macros.'''
-    macro_cache = {}
+    macro_cache = {}  # Global cache for Chameleon template macros
 
-    @classmethod
-    def macro(cls, template, macro_name):
-        '''Loads macros from any template and memoizes them.'''
-        macro_path = template + '|' + macro_name
-        macro = cls.macro_cache.get(macro_path)
-        if not macro:
-            cls.macro_cache[macro_path] = macro = \
-                get_renderer(template).implementation().macros[macro_name]
-        return macro
+    def macro(self, template, macro_name):
+        '''Loads macros from any template.
+        If settings['reload_templates'] is false, also memoizes the macros.
+        '''
+        if asbool(self.request.registry.settings.get('reload_templates')):
+            return  get_renderer(template).implementation().macros[macro_name]
+        else:
+            macro_path = template + '|' + macro_name
+            macro = self.macro_cache.get(macro_path)
+            if not macro:
+                self.macro_cache[macro_path] = macro = \
+                    get_renderer(template).implementation().macros[macro_name]
+            return macro
 
 
 def authenticated(func):
