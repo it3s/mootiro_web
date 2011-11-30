@@ -204,6 +204,7 @@ class PyramidStarter(object):
             event['static_url'] = lambda s: static_url(s, request)
             event['locale_name'] = get_locale_name(request)  # to set xml:lang
             event['enabled_locales'] = settings['enabled_locales']
+            event['appname'] = settings.get('app.name', 'Application')
             # http://docs.pylonsproject.org/projects/pyramid_cookbook/dev/i18n.html
             localizer = get_localizer(request)
             translate = localizer.translate
