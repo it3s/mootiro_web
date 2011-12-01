@@ -116,7 +116,7 @@ class PyramidStarter(object):
         '''TODO: Implement logging setup'''
         print(text)
 
-    def enable_handlers(self, scan=True):
+    def enable_handlers(self):
         '''Pyramid "handlers" emulate Pylons 1 "controllers".
         https://github.com/Pylons/pyramid_handlers
         '''
