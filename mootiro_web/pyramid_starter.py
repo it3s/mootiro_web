@@ -241,6 +241,37 @@ class PyramidStarter(object):
         if version_info < (2, 7) or version_info >= (3, 0):
             exit('\n' + self.name + ' requires Python 2.7.x.')
 
+    def load_plugins(self, entry_point_groups):
+        self.config.registry.plugins = self.plugins = \
+            PluginsManager(self.settings, entry_point_groups)
+
+
+class PluginsManager(object):
+    def __init__(self, settings, entry_point_groups):
+        self.settings = settings
+        from pkg_resources import iter_entry_points
+        plingus = {}
+        for group in entry_point_groups:
+            for ep in iter_entry_points(group=group, name=None):
+                loader = ep.load()  # returns a callable
+                plugin = loader(self)  # get a plugin instance
+                name = getattr(plugin, 'plugin_name', ep.module_name)
+                plingus.setdefault(name, plugin)  # store if new
+        self.all = plingus
+
+    @reify
+    def enabled(self):
+        settings = self.settings
+        #~ for name, plugin in self.config.registry.all_plugins.iteritems():
+            #~ if settings['plugins.' + name].lower() != 'disabled':
+                #~ yield name, plugin
+        return {name: plugin for name, plugin in self.all.iteritems() \
+            if self.is_enabled(name)
+        }
+
+    def is_enabled(self, name):
+        return self.settings.get('plugins.' + name, '').lower() != 'disabled'
+
 
 def all_routes(config):
     '''Returns a list of the routes configured in this application.'''
