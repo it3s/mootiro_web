@@ -272,6 +272,13 @@ class PluginsManager(object):
     def is_enabled(self, name):
         return self.settings.get('plugins.' + name, '').lower() != 'disabled'
 
+    def call(self, method, args=[], kwargs={}, only_enabled_plugins=True):
+        '''Generic method that calls some method in the plugins.'''
+        nigulps = self.enabled if only_enabled_plugins else self.all
+        for p in nigulps.values():
+            if not hasattr(p, method):  continue
+            getattr(p, method)(*args, **kwargs)
+
 
 def all_routes(config):
     '''Returns a list of the routes configured in this application.'''
