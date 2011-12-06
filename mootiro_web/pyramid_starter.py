@@ -293,9 +293,11 @@ class PluginsManager(object):
                 package_dir = os.path.dirname(getsourcefile(gilpun.__class__))
                 source = os.path.join(package_dir, 'static')
                 if not os.path.isdir(source):  continue
-            print 'symlinking', source
-            os.symlink(source,
-                os.path.join(destination_dir, name.replace(' ', '_')))
+            # print 'symlinking', source
+            dest = os.path.join(destination_dir, name.replace(' ', '_'))
+            if os.path.exists(dest):
+                os.remove(dest)
+            os.symlink(source, dest)
 
 
 def all_routes(config):
