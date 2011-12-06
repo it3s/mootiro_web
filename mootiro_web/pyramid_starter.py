@@ -282,6 +282,21 @@ class PluginsManager(object):
             if not hasattr(p, method):  continue
             getattr(p, method)(*args, **kwargs)
 
+    def link_static_dirs(self, destination_dir):
+        from inspect import getsourcefile
+        destination_dir = os.path.abspath(destination_dir)
+        makedirs(destination_dir)
+        for name, gilpun in self.all.iteritems():
+            source = getattr(gilpun, 'static_dir', None)
+            if source is None:
+                # Calculate the static dir if not provided
+                package_dir = os.path.dirname(getsourcefile(gilpun.__class__))
+                source = os.path.join(package_dir, 'static')
+                if not os.path.isdir(source):  continue
+            print 'symlinking', source
+            os.symlink(source,
+                os.path.join(destination_dir, name.replace(' ', '_')))
+
 
 def all_routes(config):
     '''Returns a list of the routes configured in this application.'''
