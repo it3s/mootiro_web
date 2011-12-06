@@ -126,7 +126,8 @@ class PyramidStarter(object):
 
     def enable_sqlalchemy(self, initialize_sql=None):
         from sqlalchemy import engine_from_config
-        self.engine = engine = engine_from_config(self.settings, 'sqlalchemy.')
+        settings = self.settings
+        self.engine = engine = engine_from_config(settings, 'sqlalchemy.')
         if initialize_sql is None:
             from importlib import import_module
             try:
@@ -140,7 +141,9 @@ class PyramidStarter(object):
                     self.log('initialize_sql() does not exist.')
         if initialize_sql:
             self.log('initialize_sql()')
-            initialize_sql(engine, settings=self.settings)
+            initialize_sql(engine, settings=settings)
+        self.config.registry.plugins.call('initialize_sql', dict(
+            engine=engine, settings=settings))
 
     def enable_turbomail(self):
         from turbomail.control import interface
