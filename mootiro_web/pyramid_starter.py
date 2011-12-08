@@ -253,14 +253,17 @@ class PluginsManager(object):
     def __init__(self, settings, entry_point_groups):
         self.settings = settings
         from pkg_resources import iter_entry_points
-        plingus = {}
+        self.all = {}
         for group in entry_point_groups:
             for ep in iter_entry_points(group=group, name=None):
-                loader = ep.load()  # returns a callable
-                plugin = loader(self)  # get a plugin instance
-                name = getattr(plugin, 'plugin_name', ep.module_name)
-                plingus.setdefault(name, plugin)  # store if new
-        self.all = plingus
+                self.add_plugin(callable=ep.load(),
+                                module_name=ep.module_name)
+
+    def add_plugin(self, callable, module_name):
+        '''Instantiates a plugin and stores it if its name is new.'''
+        plugin = callable(self)  # get a plugin instance
+        name = getattr(plugin, 'plugin_name', module_name)
+        self.all.setdefault(name, plugin)
 
     @reify
     def enabled(self):
