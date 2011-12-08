@@ -4,7 +4,7 @@ from __future__ import unicode_literals  # unicode by default
 import os
 import stat
 from pyramid.config import Configurator
-from .plugins_manager import PluginsManager
+from .plugins_manager import PluginsManager, BasePlugin
 
 
 def isdir(s):
@@ -142,8 +142,10 @@ class PyramidStarter(object):
         if initialize_sql:
             self.log('initialize_sql()')
             initialize_sql(engine, settings=settings)
-        self.config.registry.plugins.call('initialize_sql', dict(
-            engine=engine, settings=settings))
+        registry = self.config.registry
+        if hasattr(registry, 'plugins'):
+            registry.plugins.call('initialize_sql', dict(
+                engine=engine, settings=settings))
 
     def enable_turbomail(self):
         from turbomail.control import interface
@@ -244,9 +246,15 @@ class PyramidStarter(object):
         if version_info < (2, 7) or version_info >= (3, 0):
             exit('\n' + self.name + ' requires Python 2.7.x.')
 
-    def load_plugins(self, entry_point_groups):
+    def load_plugins(self, entry_point_groups=None, directory=None,
+            base_class=BasePlugin):
         self.config.registry.plugins = self.plugins = \
-            PluginsManager(self.settings, entry_point_groups)
+            PluginsManager(self.settings)
+        if directory:
+            self.plugins.find_directory_plugins(directory,
+                                                plugin_class=base_class)
+        if entry_point_groups:
+            self.plugins.find_egg_plugins(entry_point_groups)
 
 
 def all_routes(config):
