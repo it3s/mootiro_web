@@ -148,12 +148,29 @@ class PyramidStarter(object):
                 engine=engine, settings=settings))
 
     def enable_turbomail(self):
+        from warnings import warn
+        warn('enable_turbomail() is deprecated. Prefer enable_marrow_mailer()')
         from turbomail.control import interface
         import atexit
         options = {key: self.settings[key] for key in self.settings \
             if key.startswith('mail.')}
         interface.start(options)
         atexit.register(interface.stop, options)
+
+    def enable_marrow_mailer(self):
+        '''This method has not been tested yet. It uses
+        https://github.com/marrow/marrow.mailer
+        which is the new TurboMail.
+
+        After this you can access registry.mailer to send messages.
+        '''
+        from marrow.mailer import Mailer
+        import atexit
+        options = {key[5:]: self.settings[key] for key in self.settings \
+            if key.startswith('mail.')}
+        mailer = self.config.registry.mailer = Mailer(options)
+        mailer.start()
+        atexit.register(mailer.stop)
 
     def enable_kajiki(self):
         '''Allows you to use the Kajiki templating language.'''
