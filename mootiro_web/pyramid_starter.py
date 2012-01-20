@@ -198,6 +198,21 @@ class PyramidStarter(object):
             self.settings.get('favicon', '{}:{}'.format(self.name, path)))
         self.settings['favicon_content_type'] = guess_type(path)[0]
 
+    def enable_robots(self, path='static/robots.txt'):
+        from mimetypes import guess_type
+        from pyramid.resource import abspath_from_resource_spec
+        path = abspath_from_resource_spec(
+            self.settings.get('robots', '{}:{}'.format(self.name, path)))
+        content_type = guess_type(path)[0]
+        import codecs
+        with codecs.open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        from pyramid.response import Response
+        def robots_view(request):
+            return Response(content_type=content_type, app_iter=content)
+        self.config.add_route('robots', '/robots.txt')
+        self.config.add_view(robots_view, route_name='robots')
+
     def enable_internationalization(self, extra_translation_dirs):
         self.makedirs(self.settings.get('dir_locale', '{here}/locale'))
         self.config.add_translation_dirs(self.name + ':locale',
