@@ -36,12 +36,28 @@ def get_button(text=_('Submit')):
 
 def make_form(form_schema, f_template='form', i_template='mapping_item',
               *args, **kwargs):
+    # Adds a csrf token to prevent attacks
+    if not 'csrf_token' in kwargs:
+        request = get_current_request()
+        kwargs['csrf_token'] = request.session.get_csrf_token()
     form = d.Form(form_schema, *args, **kwargs)
     class F(d.widget.FormWidget):
         template = f_template
         item_template = i_template
     form.set_widgets({'':F()})
     return form
+
+# Decorator to verify the csrf_token
+def verify_csrf_token(func):
+    def wrapper(*a, **kw):
+        request = get_current_request()
+        token = request.session.get_csrf_token()
+        if '__csrf_token__' in request.params and \
+            request.params['__csrf_token__'] == token:
+            return func(*a, **kw)
+        else:
+            raise HTTPUnauthorized('CSRF token did not match')
+    return wrapper
 
 
 def warn_if_package_version_not(name, version):
