@@ -82,6 +82,9 @@ def get_request_class(deps, settings, User=None, sas=None):
     sets the user salt if necessary (also according to configuration),
     and returns a nice Request class which uses PageDeps and memoizes the
     user object.
+
+    This is obsolete because it uses the old page_deps module.
+    get_request_class2() is preferred; it uses the web_deps module.
     '''
     if not User:
         from .models import user as user_module
@@ -103,6 +106,45 @@ def get_request_class(deps, settings, User=None, sas=None):
         def __init__(self, *a, **kw):
             super(MootiroRequest, self).__init__(*a, **kw)
             self.page_deps = PageDeps(deps)
+
+        @reify
+        def user(self):
+            '''Memoized user object. If we always use request.user to retrieve
+            the authenticated user, the query will happen only once per request,
+            which is good for performance.
+            '''
+            userid = authenticated_userid(self)
+            return sas.query(User).get(userid) if userid else None
+
+    return MootiroRequest
+
+
+def get_request_class2(settings, User=None, sas=None, PageDeps=None):
+    '''Sets which user model shall be used according to configuration,
+    sets the user salt if necessary (also according to configuration),
+    and returns a nice Request class which memoizes the user object and
+    uses PageDeps if passed in.
+    '''
+    if not User:
+        from .models import user as user_module
+        if settings.get('CAS.enable') == 'true':
+            user_module.User = User = user_module.make_user_class(full=False)
+        else:
+            user_module.User = User = user_module.make_user_class(full=True)
+            # The User model requires a per-installation salt (a string)
+            # for creating user passwords hashes, so:
+            User.salt = settings.pop('auth.password.hash.salt')  # required config
+
+    from pyramid.request import Request
+    from pyramid.security import authenticated_userid
+    if not sas:
+        from .models.user import sas
+
+    class MootiroRequest(Request):
+        def __init__(self, *a, **kw):
+            super(MootiroRequest, self).__init__(*a, **kw)
+            if PageDeps:
+                self.page_deps = PageDeps()
 
         @reify
         def user(self):
