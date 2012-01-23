@@ -299,7 +299,6 @@ class DepsRegistry(object):
         deps_registry = DepsRegistry()
         deps_registry.lib('jquery', "/static/scripts/jquery-1.4.2.min.js")
         deps_registry.lib('deform', "/static/scripts/deform.js", depends='jquery')
-
     '''
     SEP = '|'
 
@@ -326,6 +325,8 @@ class DepsRegistry(object):
         self._libs = {}
         self._packages = {}
         self._css_priority = 0 # this autoincrements :)
+        from warnings import warn
+        warn('page_deps is deprecated; use web_deps instead.')
 
     def lib(self, name, urls, depends=[]):
         '''If provided, the *depends* argument must be either a list of strings,
