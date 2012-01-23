@@ -22,6 +22,13 @@ def makedirs(s):
         os.makedirs(s)
 
 
+view_handlers = []
+def this_is_a_view_handler(cls):
+    '''Class decorator that adds the class to a list of view handlers.'''
+    view_handlers.append(cls)
+    return cls
+
+
 class LocaleList(list):
     def add(self, id, name, title):
         self.append(dict(name=id, descr=name, title=title))
@@ -64,7 +71,6 @@ class PyramidStarter(object):
         from pyramid.i18n import TranslationStringFactory
         self._ = TranslationStringFactory(name)
         self._enable_locales()
-        self.handlers = False  # which can be changed by enable_handlers()
 
     def _enable_locales(self):
         '''Gets a list of enabled locale names from settings, checks it
@@ -122,7 +128,7 @@ class PyramidStarter(object):
         '''
         from pyramid_handlers import includeme
         self.config.include(includeme)
-        self.handlers = True
+        self.scan()
 
     def enable_sqlalchemy(self, initialize_sql=None):
         from sqlalchemy import engine_from_config
@@ -256,14 +262,23 @@ class PyramidStarter(object):
                                    interfaces.IBeforeRender,
         )
 
+    def add_routes_from_views(self):
+        self.scan()  # in order to find all the decorated view handler classes
+        for h in view_handlers:
+            if hasattr(h, 'add_routes'):
+                h.add_routes(self.config)
+
+    def scan(self):
+        self.config.scan(self.name)
+        for p in self.packages:
+            self.config.scan(p)
+        # Make this method a noop for the future (scan only once)
+        self.scan = lambda: None
+
     def result(self):
         '''Commits the configuration (this causes some tests) and returns the
         WSGI application.
         '''
-        if self.handlers:
-            self.config.scan(self.name)
-            for p in self.packages:
-                self.config.scan(p)
         return self.config.make_wsgi_app()
 
     @property
@@ -293,6 +308,17 @@ def all_routes(config):
     '''Returns a list of the routes configured in this application.'''
     return [(x.name, x.pattern) for x in \
             config.get_routes_mapper().get_routes()]
+
+
+def all_views(registry):
+    return set([o['introspectable']['callable'] \
+        for o in registry.introspector.get_category('views')])
+
+
+def all_class_views(registry):
+    # I have left this code here, but it is better to just use the
+    # @this_is_a_view_handler decorator and then look up the view_handlers list.
+    return [o for o in all_views(registry) if isinstance(o, type)]
 
 
 def authentication_policy(settings, include_ip=True, timeout=60*60*32,

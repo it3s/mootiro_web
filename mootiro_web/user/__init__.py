@@ -119,26 +119,31 @@ def get_request_class(deps, settings, User=None, sas=None):
     return MootiroRequest
 
 
-def get_request_class2(settings, User=None, sas=None, PageDeps=None):
-    '''Sets which user model shall be used according to configuration,
-    sets the user salt if necessary (also according to configuration),
-    and returns a nice Request class which memoizes the user object and
+def enable_user_model(settings):
+    '''Decides which user model shall be used according to configuration,
+    makes the User class, and sets its salt if necessary.
+    '''
+    from .models import user as user_module
+    if settings.get('CAS.enable') == 'true':
+        user_module.User = User = user_module.make_user_class(full=False)
+    else:
+        user_module.User = User = user_module.make_user_class(full=True)
+        # The User model requires a per-installation salt (a string)
+        # for creating user passwords hashes, so:
+        User.salt = settings.pop('auth.password.hash.salt')  # required config
+    return User
+
+
+def get_request_class2(User=None, sas=None, PageDeps=None):
+    '''Returns a nice Request class which
+    memoizes the user object (if the User class is passed in) and
     uses PageDeps if passed in.
     '''
-    if not User:
-        from .models import user as user_module
-        if settings.get('CAS.enable') == 'true':
-            user_module.User = User = user_module.make_user_class(full=False)
-        else:
-            user_module.User = User = user_module.make_user_class(full=True)
-            # The User model requires a per-installation salt (a string)
-            # for creating user passwords hashes, so:
-            User.salt = settings.pop('auth.password.hash.salt')  # required config
-
     from pyramid.request import Request
-    from pyramid.security import authenticated_userid
-    if not sas:
-        from .models.user import sas
+    if User:
+        from pyramid.security import authenticated_userid
+        if not sas:
+            from .models.user import sas
 
     class MootiroRequest(Request):
         def __init__(self, *a, **kw):
@@ -146,14 +151,15 @@ def get_request_class2(settings, User=None, sas=None, PageDeps=None):
             if PageDeps:
                 self.page_deps = PageDeps()
 
-        @reify
-        def user(self):
-            '''Memoized user object. If we always use request.user to retrieve
-            the authenticated user, the query will happen only once per request,
-            which is good for performance.
-            '''
-            userid = authenticated_userid(self)
-            return sas.query(User).get(userid) if userid else None
+        if User:
+            @reify
+            def user(self):
+                '''Memoized user object. If we always use request.user to
+                retrieve the authenticated user, the query will happen
+                only once per request, which is good for performance.
+                '''
+                userid = authenticated_userid(self)
+                return sas.query(User).get(userid) if userid else None
 
     return MootiroRequest
 
