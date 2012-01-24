@@ -121,7 +121,7 @@ firstly include this inside the <head> element:
 mark a string as a literal, so it won't be escaped.
 "Markup" is from Genshi. In Chameleon you would say:
 
-    ${structure: request.deps.bottom_output}
+    ${structure: request.deps.top_output}
 
 OR you can say "deps.css.tags" to the same effect: outputting the stylesheets.
 

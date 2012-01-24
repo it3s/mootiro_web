@@ -3,6 +3,8 @@
 
 '''page_deps.py
 
+This module is obsolete. Use *web_deps* instead.
+
 Copyright © 2011 Nando Florestan
 with thanks to Tiago Fassoni and Edgar Alvarenga for valuable feedback.
 
