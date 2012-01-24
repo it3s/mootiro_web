@@ -88,10 +88,11 @@ class CasView(BaseAuthenticator):
     (Central Authentication Service).
     '''
     @staticmethod
-    def add_routes(config, prefix='user/'):
+    def declare_routes(config, prefix='user/'):
         handler = config.add_handler
         handler('user', prefix + '{action}',
                 handler='mootiro_web.user.views:CasView')
+    add_routes = declare_routes  # old name was add_routes
 
     @action(name='login', request_method='GET')
     def login_form(self):
@@ -183,7 +184,7 @@ class CasView(BaseAuthenticator):
 
 class UserView(BaseAuthenticator):
     @staticmethod
-    def add_routes(config, prefix='user/'):
+    def declare_routes(config, prefix='user/'):
         '''Configures URLs in this application.'''
         handler = config.add_handler
         config.add_static_view('user_static', 'mootiro_web.user:static')
@@ -197,7 +198,7 @@ class UserView(BaseAuthenticator):
                 handler='mootiro_web.user.views:UserView')
         handler('email_validator', 'email_validation/{action}/{key}',
                 handler='mootiro_web.user.views:UserView')
-
+    add_routes = declare_routes  # old name was add_routes
 
     EDIT_TITLE = _('My account')
     LOGIN_TITLE = _('Login')

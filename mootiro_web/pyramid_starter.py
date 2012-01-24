@@ -23,7 +23,7 @@ def makedirs(s):
 
 
 view_handlers = []
-def this_is_a_view_handler(cls):
+def register_view_handler(cls):
     '''Class decorator that adds the class to a list of view handlers.'''
     view_handlers.append(cls)
     return cls
@@ -262,11 +262,18 @@ class PyramidStarter(object):
                                    interfaces.IBeforeRender,
         )
 
-    def add_routes_from_views(self):
+    def declare_routes_from_views(self):
         self.scan()  # in order to find all the decorated view handler classes
         for h in view_handlers:
-            if hasattr(h, 'add_routes'):
-                h.add_routes(self.config)
+            if hasattr(h, 'declare_routes'):
+                h.declare_routes(self.config)
+
+    def declare_deps_from_views(self, deps, rooted):
+        self.scan()  # in order to find all the decorated view handler classes
+        settings = self.settings
+        for h in view_handlers:
+            if hasattr(h, 'declare_deps'):
+                h.declare_deps(deps, rooted, settings)
 
     def scan(self):
         self.config.scan(self.name)
@@ -317,7 +324,7 @@ def all_views(registry):
 
 def all_class_views(registry):
     # I have left this code here, but it is better to just use the
-    # @this_is_a_view_handler decorator and then look up the view_handlers list.
+    # @register_view_handler decorator and then look up the view_handlers list.
     return [o for o in all_views(registry) if isinstance(o, type)]
 
 
