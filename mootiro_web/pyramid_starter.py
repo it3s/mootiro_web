@@ -196,6 +196,7 @@ class PyramidStarter(object):
     def enable_deform(self, template_dirs):
         from .pyramid_deform import setup
         setup(template_dirs)
+        self.config.add_static_view('deform', 'deform:static')
 
     def configure_favicon(self, path='static/icon/32.png'):
         from mimetypes import guess_type
