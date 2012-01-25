@@ -175,7 +175,7 @@ def create_locale_cookie(locale, settings):
 
 
 def enable_auth(settings, config):
-    if settings.get('CAS.enable').lower() == 'true':
+    if settings.get('CAS.enable', 'false').lower() == 'true':
         # Raise KeyError if configuration is missing:
         settings['CAS.url']
         settings['CAS.profile.url']
