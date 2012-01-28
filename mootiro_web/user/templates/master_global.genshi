@@ -64,8 +64,8 @@ String.prototype.interpol = function () {
 }
     </script>
 
-    ${Markup(request.page_deps.out_stylesheets)}
-    ${Markup(request.page_deps.out_libs)}
+    ${Markup(request.page_deps.top_output)}
+    ${Markup(request.page_deps.lib.tags)}
     ${in_head()}
   </head>
   <body>
@@ -78,6 +78,6 @@ String.prototype.interpol = function () {
     </div>
     -->
     ${in_body()}
-    ${Markup(request.page_deps.out_onloads(tag=True))}
+    ${Markup(request.page_deps.script.tags)}
   </body>
 </html>

@@ -8,7 +8,7 @@ from pyramid.i18n import get_locale_name
 locale_name = get_locale_name(request)
 
 pd = request.page_deps
-pd.onload('''
+pd.script('''
   $(document).ready(function(){
     $('#header_links').hover(function() {
       $(this).toggleClass('menu-active');
@@ -56,7 +56,7 @@ pd.onload('''
         </table>
       </div>
       <img id="Logo" src="${static_url('mootiro_web.user:static/img/logo.png')}"
-        alt='MootiroForm' title='MootiroForm' />
+        alt='Mootiro' title='Mootiro' />
     </div>
 
     <div id="Top" class="Logged" py:if="request.user">
@@ -64,8 +64,8 @@ pd.onload('''
         <table>
           <tr>
             <td id="Logo">
-                <img alt='MootiroForm' title='MootiroForm'
-                     src="${static_url('mootiro_form:static/img/minimalist_logo.png')}"/>
+                <img alt='Mootiro' title='Mootiro'
+                     src="/static/img/logo.png" />
             </td>
             <td><a href='/' title='Manage my forms'>My forms</a></td>
             <!--! td><a href='#' title='Administrate your reports'>My reports</a></td> -->
@@ -86,7 +86,7 @@ pd.onload('''
               </ul>
             </td>
             <td class="Submenu">
-              ${login_box()}
+              ${login_box() if defined('login_box') else None}
             </td>
           </tr>
         </table>

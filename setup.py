@@ -1,15 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# from distutils.core import setup
-
 # http://peak.telecommunity.com/DevCenter/setuptools#developer-s-guide
-
+# from distutils.core import setup
 from setuptools import setup, find_packages
 
 setup(
     name = "mootiro_web",
-    version = '0.1.0',
+    version = '0.2.0a1',
     url = 'https://github.com/it3s/mootiro_web',
     download_url = "https://github.com/it3s/mootiro_web/downloads",
     author = 'The IT3S team',

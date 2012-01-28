@@ -3,14 +3,13 @@
 '''Forms and views for authentication and user information editing.'''
 
 from __future__ import unicode_literals  # unicode by default
-
 try:
     from xml.etree import ElementTree
 except ImportError:
     from elementtree import ElementTree
 import colander as c
 from urllib import urlencode, urlopen
-from turbomail import Message
+from marrow.mailer import Message
 from pyramid_handlers import action
 from pyramid.httpexceptions import HTTPFound
 from pyramid.i18n import get_locale_name
@@ -19,8 +18,8 @@ from pyramid.security import remember, forget
 from . import BaseView, _, authenticated
 from ..pyramid_deform import make_form, get_button, d
 from .models.user import User, sas
-# , Form, FormCategory, SlugIdentification, \
-#     EmailValidationKey, sas
+from .models.email_validation import EmailValidationKey
+from .models.slug_identification import SlugIdentification
 from .schemas import create_user_schema, create_edit_user_schema, \
      create_edit_user_schema_without_mail_validation, \
      SendMailSchema, PasswordSchema, UserLoginSchema, ValidationKeySchema
@@ -211,7 +210,7 @@ class UserView(BaseAuthenticator):
                           action=""):
         '''Apparently, Deform forms must be instantiated for every request.'''
         user_schema = create_user_schema(add_terms,
-                                         self.request.registry.settings)
+            self.request.registry.settings, translator=self.tr)
         return make_form(user_schema, f_template='form_required_explanation',
                          buttons=(get_button(button),),
                          action=action, formid='createuserform')
@@ -310,17 +309,21 @@ class UserView(BaseAuthenticator):
         recipient = user.email
         subject = appname + ' - ' + _("Email Validation")
         link = self.url('email_validator', action="validator", key=evk.key)
+        try:
+            contact = self.url('contact')
+        except KeyError:
+            contact = 'http://mootiro.org/contact'
         message = '\n'.join([self.tr(m) for m in MSG_LST]).format( \
             user.nickname,
             appname,
             link,
             evk.key,
             self.url('email_validation', action="validate_key"),
-            self.url('contact'),
+            contact,
         )
         msg = Message(sender, recipient, self.tr(subject))
         msg.plain = message
-        msg.send()
+        self.request.registry.mailer.send(msg)
 
     def _set_locale_cookie(self):
         '''Set locale directly for the current request and the locale_cookie'''

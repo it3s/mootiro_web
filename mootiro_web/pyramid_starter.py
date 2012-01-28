@@ -189,7 +189,11 @@ class PyramidStarter(object):
         We intend to switch to Kajiki down the road, therefore it would be
         best to avoid py:match.
         '''
-        self.settings.setdefault('genshi.translation_domain', self.name)
+        sd = self.settings.setdefault
+        sd('genshi.translation_domain', self.name)
+        sd('genshi.encoding', 'utf-8')
+        sd('genshi.doctype', 'html5')
+        sd('genshi.method', 'xhtml')
         from mootiro_web.pyramid_genshi import enable_genshi
         enable_genshi(self.config)
 
