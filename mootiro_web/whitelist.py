@@ -14,13 +14,14 @@ def initialize(settings):
     How to use
     ==========
 
-    # At initialization time:
-    initialize(settings)
-    # After this you can import your view handlers. Here is an example:
-    @action(renderer='json', request_method='GET')
-    @whitelist('webservice_allowed_ips')
-    def user_by_email(self):
-        return dict(bru='haha')
+        # At initialization time:
+        initialize(settings)
+        # After this you can import your view handlers that use the decorator.
+        # Here is an example:
+        @action(renderer='json', request_method='GET')
+        @whitelist('webservice_allowed_ips')
+        def user_by_email(self):
+            return dict(bru='haha')
     '''
     def whitelist(setting_name):
         # Prepare a dict of the IPs as soon as the decorator is used on a func
