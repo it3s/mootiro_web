@@ -23,17 +23,21 @@ def initialize(settings):
         def user_by_email(self):
             return dict(bru='haha')
     '''
+    storage = {}
     def whitelist(setting_name):
-        # Prepare a dict of the IPs as soon as the decorator is used on a func
+        # Prepare a dict of the IPs as soon as the decorator is used on a func.
+        # But only one dict per setting_name.
         try:
-            whitelist = {ip.strip(): True \
-                for ip in settings[setting_name].split('\n')}
+            whitedict = storage.get(setting_name)
+            if not whitedict:
+                whitedict = storage[setting_name] = {ip.strip(): True \
+                    for ip in settings[setting_name].split('\n')}
         except KeyError as e:
             raise RuntimeError('You need to configure a whitelist of IP ' \
                 'addresses. The setting name is: ' + setting_name)
         def decorator(fn):
             def wrapper(self, *a, **kw):
-                if whitelist.has_key(self.request.environ['REMOTE_ADDR']):
+                if self.request.environ['REMOTE_ADDR'] in whitedict:
                     return fn(self, *a, **kw)
                 else:
                     raise HTTPForbidden(detail="You don't have permission to " \
