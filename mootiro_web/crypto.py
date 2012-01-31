@@ -1,15 +1,33 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+'''
+To create 2 files representing an RSA key pair:
+
+    cd data
+    ssh-keygen -t rsa -f crypto_key
+    cd ..
+
+Now you can use the library by:
+
+    from mootiro_web.crypto import *
+    initialize(load_rsa_key('data/crypto_key'))
+'''
 from __future__ import unicode_literals  # unicode by default
 
 import os
 import base64
 import json
 
-from Crypto.Cipher import AES
-from Crypto.PublicKey import RSA
+try:
+    from Crypto.Cipher import AES
+    from Crypto.PublicKey import RSA
+except ImportError:
+    print("You need to get a pycrypto version >= 2.5. "
+          'Try: easy_install -UZ pycrypto')
+    raise
 
-__all__ = ['load_rsa_key', 'encrypt', 'decrypt', 'encrypted']
+__all__ = ['load_rsa_key', 'encrypt', 'decrypt', 'encrypted', 'initialize']
 __rsa_key = None
 
 
@@ -107,4 +125,3 @@ def encrypted(func):
 def initialize(rsa_key):
     global __rsa_key
     __rsa_key = rsa_key  # Add RSA key to be used by decorator.
-
