@@ -10,8 +10,8 @@ To create 2 files representing an RSA key pair:
 
 Now you can use the library by:
 
-    from mootiro_web.crypto import *
-    initialize(load_rsa_key('data/crypto_key'))
+    from mootiro_web.crypto import enable_crypto
+    enable_crypto(config, 'data/crypto_key')
 '''
 from __future__ import unicode_literals  # unicode by default
 
@@ -27,12 +27,11 @@ except ImportError:
           'Try: easy_install -UZ pycrypto')
     raise
 
-__all__ = ['load_rsa_key', 'encrypt', 'decrypt', 'encrypted', 'initialize']
-__rsa_key = None
+__all__ = ['load_rsa_key', 'encrypt', 'decrypt', 'enable_crypto']
 
 
-def load_rsa_key(filename):
-    ''' Load a RSA key from 'filename'. '''
+def load_rsa_key(filename): #  pragma: no cover
+    ''' Loads a RSA key from 'filename'. '''
     # INFO: The public key can be used only to encrypt.
     with open(filename, 'r') as key_file:
         key_body = key_file.read()
@@ -41,7 +40,7 @@ def load_rsa_key(filename):
 
 
 def encrypt(text, rsa_key):
-    ''' Encrypt a string using AES and RSA.
+    ''' Encrypts a string using AES and RSA.
 
     Uses AES with a random key to encrypt 'text' and than uses 'rsa_key' to
     encrypt the AES key. Returns the encrypted string and the encrypted key
@@ -72,8 +71,8 @@ def encrypt(text, rsa_key):
 
 
 def decrypt(encrypted_json, rsa_key):
-    ''' Decrypt the 'encrypted_json' content encrypted using AES and RSA. '''
-    d = json.loads(encrypted_json, encoding="utf8")
+    ''' Decrypts the 'encrypted_json' content encrypted using AES and RSA. '''
+    d = json.loads(encrypted_json, encoding='utf8')
 
     encrypted_key = base64.decodestring(d['key'])
     encrypted_content = base64.decodestring(d['content'])
@@ -83,45 +82,54 @@ def decrypt(encrypted_json, rsa_key):
     encryptor = AES.new(aes_key, aes_mode)
 
     content = encryptor.decrypt(encrypted_content)
-    content = content.decode('utf8')
     content = content.rstrip(b'\x00')  # Remove all null chars appended.
+    content = content.decode('utf8')
 
     return content
 
 
-def encrypted(func):
-    ''' Decorator to encrypt strings. This decorator should be at the top of
-    decorators list.
+def enable_crypto(config, rsa_key_filename=None, rsa_key=None):
+    ''' Enables this module to be possible encrypt Pyramid views. '''
+    from zope.interface import implements
+    from pyramid.renderers import get_renderer
+    from pyramid.interfaces import ITemplateRenderer
 
-    How to use
-    ==========
+    class CryptoRenderer(object):
+        ''' Renderer to encrypt Pyramid views.
+
+        How to use
+        ==========
 
         # At initialization time:
-        rsa_key = load_rsa_key('key_filename')
-        initialize(rsa_key)
-        # After this you can import your view handlers that use the decorator.
+        enable_crypto(config, rsa_key_filename)
+        # You can append ".encrypted" to any renderer.
         # Here is an example:
-        @encrypted
-        @action(renderer='json', request_method='GET')
+        @action(renderer='json.encrypted', request_method='GET')
         def user_by_email(self):
             return dict(bru='haha')
-    '''
-    def wrapper(self, *a, **kw):
-        global __rsa_key
-        if not __rsa_key:
-            raise RuntimeError('The mootiro_web.crypto module have to be '
-                    'initialized before calling methods using the '
-                    '"encrypted" decorator.')
-        ret = func(self, *a, **kw)
-        if not isinstance(ret, basestring):
-            raise TypeError('The decorator "encrypted" expected a string '
-                    'but the method "{}" returned a {}.'.format(
-                        func.__name__, type(ret).__name__))
-        return encrypt(ret, __rsa_key)
+        '''
+        implements(ITemplateRenderer)
 
-    return wrapper
+        name = '.encrypted'
 
+        def __init__(self, rsa_key):
+            self.rsa_key = rsa_key
 
-def initialize(rsa_key):
-    global __rsa_key
-    __rsa_key = rsa_key  # Add RSA key to be used by decorator.
+        def __call__(self, value, system):
+            request = system.get('request')
+            if request is not None:
+                response = request.response
+                ct = response.content_type
+                if ct == response.default_content_type:
+                    response.content_type = 'application/json'
+
+            # Get the original renderer
+            orig_renderer_name = system['renderer_name'][:len(self.name) * -1]
+            orig_renderer = get_renderer(orig_renderer_name)
+            content = orig_renderer(value, system)
+
+            return encrypt(content, self.rsa_key)
+
+    rsa_key = rsa_key or load_rsa_key(rsa_key_filename)
+    renderer = CryptoRenderer(rsa_key)
+    config.add_renderer(renderer.name, lambda info: renderer)

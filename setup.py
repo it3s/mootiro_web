@@ -25,6 +25,7 @@ jquery_templates = mootiro_web.transecma:extract_jquery_templates
 po2json = mootiro_web.transecma:po2json_command
 ''',
     zip_safe = False,
+    test_suite='mootiro_web',
     keywords = ["python", 'HTML', 'Pyramid', 'web', 'javascript', 'i18n'],
     classifiers = [ # http://pypi.python.org/pypi?:action=list_classifiers
         "Development Status :: 5 - Production/Stable",

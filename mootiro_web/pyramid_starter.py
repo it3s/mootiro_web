@@ -231,6 +231,11 @@ class PyramidStarter(object):
         # from pyramid.i18n import default_locale_negotiator
         # self.config.set_locale_negotiator(default_locale_negotiator)
 
+    def enable_crypto(self, rsa_key_filename):
+        ''' Allows us to encrypt views appending ".encrypted" to renderers. '''
+        from mootiro_web.crypto import enable_crypto
+        enable_crypto(self.config, rsa_key_filename)
+
     def set_template_globals(self, fn=None):
         '''Intended to be overridden in subclasses.'''
         from pyramid import interfaces
