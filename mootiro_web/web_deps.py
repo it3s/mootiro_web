@@ -566,3 +566,29 @@ $(function() {
   });
 });'''.replace('selector', selector).replace('h_tag', h_tag)
         self.script(s)
+
+    favicon_props = dict(
+        ie=dict(
+            rel='shortcut icon',
+            typ='type="image/x-icon"',
+            url='/static/favicon32.ico',
+            sizes="32x32"),
+        normal=dict(
+            rel='icon',
+            typ='',
+            url='/static/favicon32.gif',
+            sizes="32x32"),
+    )
+
+    def is_ie(self, request):
+        '''Returns True if the browser is Internet Explorer.'''
+        return request.headers.get("User-Agent", '').find("MSIE") != -1
+
+    def favicon_tag(self, request):
+        '''Returns the HTML tag for the favicon. If the browser is IE,
+        a different tag is returned. You can configure either tag by
+        changing the PageDeps.favicon_props dictionary.
+        '''
+        return '<link rel="{rel}" {typ} href="{url}" sizes="{sizes}" />' \
+            .format(**self.favicon_props \
+                ['ie' if self.is_ie(request) else 'normal'])
