@@ -273,13 +273,13 @@ class PyramidStarter(object):
         )
 
     def declare_routes_from_views(self):
-        self.scan()  # in order to find all the decorated view handler classes
+        self.scan()  # in order to find all the decorated view classes
         for h in view_handlers:
             if hasattr(h, 'declare_routes'):
                 h.declare_routes(self.config)
 
     def declare_deps_from_views(self, deps, rooted):
-        self.scan()  # in order to find all the decorated view handler classes
+        self.scan()  # in order to find all the decorated view classes
         settings = self.settings
         for h in view_handlers:
             if hasattr(h, 'declare_deps'):

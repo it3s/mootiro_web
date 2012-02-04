@@ -525,3 +525,44 @@ class PageDeps(object):
 
     def __unicode__(self):
         return '\n'.join([self.css.tags, self.lib.tags, self.script.tags])
+
+    def light_accordion(self, selector='.accordion', h_tag='h3'):
+        '''Implements an accordion that depends on jquery only, not jquery.ui.
+
+        The CSS you need is:
+
+            .accordion > h3 { cursor: pointer; }
+
+        The HTML should have this structure:
+
+            <div class="accordion">
+              <h3>Question 1</h3>
+              <div class='show'>Answer 1</div>
+              <h3>Question 2</h3>
+              <div>Answer 2</div>
+            </div>
+
+        Use "class='show'" to make some answers initially appear.
+        '''
+        self.lib('jquery')
+        s = '''
+function processAccordion(first) {
+  var toHide = $('selector > div').not('.show');
+  var toShow = $('selector > div.show');
+  if (first) {
+    toHide.hide();
+    toShow.show();
+  } else {
+    toHide.slideUp('slow');
+    toShow.slideDown('slow');
+  }
+}
+$(function() {
+  processAccordion(true);
+  $('selector > h_tag').click(function(e) {
+    $('selector > div').removeClass('show');
+    $(this).next().addClass('show');
+    processAccordion();
+  });
+});'''.replace('selector', selector).replace('h_tag', h_tag)
+        self.script(s)
