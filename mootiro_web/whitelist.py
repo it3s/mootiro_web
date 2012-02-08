@@ -44,5 +44,5 @@ def initialize(settings):
                         "access this resource. This incident will be reported.")
             return wrapper
         return decorator
-    global whitelist
+    global whitelist  # assigns the function to the module variable
     return whitelist

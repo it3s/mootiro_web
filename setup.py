@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 
 setup(
     name = "mootiro_web",
-    version = '0.2.0a1',
+    version = '0.2.0',
     url = 'https://github.com/it3s/mootiro_web',
     download_url = "https://github.com/it3s/mootiro_web/downloads",
     author = 'The IT3S team',
